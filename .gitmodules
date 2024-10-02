@@ -1,0 +1,3 @@
+[submodule "test-erc20-project/lib/forge-std"]
+	path = test-erc20-project/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
