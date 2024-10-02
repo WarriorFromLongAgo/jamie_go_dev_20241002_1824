@@ -1,3 +1,9 @@
 [submodule "test-erc20-project/lib/forge-std"]
 	path = test-erc20-project/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "test-erc20-project/lib/openzeppelin-contracts-upgradeable"]
+	path = test-erc20-project/lib/openzeppelin-contracts-upgradeable
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable
+[submodule "test-erc20-project/lib/openzeppelin-contracts"]
+	path = test-erc20-project/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
