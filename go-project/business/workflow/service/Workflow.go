@@ -2,11 +2,11 @@ package service
 
 import (
 	"fmt"
-	"go-project/main/app"
-	"gorm.io/gorm"
+	"go-project/main/log"
 	"time"
 
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 
 	"go-project/business/workflow/do"
 	"go-project/business/workflow/dto"
@@ -14,11 +14,11 @@ import (
 )
 
 type Service struct {
-	logger app.Logger
+	logger *log.ZapLogger
 	db     *gorm.DB
 }
 
-func NewService(logger app.Logger, db *gorm.DB) *Service {
+func NewService(logger *log.ZapLogger, db *gorm.DB) *Service {
 	return &Service{
 		logger: logger,
 		db:     db,
@@ -34,7 +34,8 @@ func (service *Service) CreateWorkFlowService(dto *dto.WorkflowInfoCreateDTO) (*
 		CreateAddr:   dto.ToAddr,
 		CreatedTime:  time.Now(),
 	}
-	err := do.DefaultWorkFlowInfoManager.Create(newWorkflow)
+	workflowManager := do.NewWorkFlowInfoManager(service.db)
+	err := workflowManager.Create(newWorkflow)
 	if err != nil {
 		return nil, fmt.Errorf("CreateWorkFlow error: %w", err)
 	}
@@ -57,15 +58,17 @@ func (service *Service) PageWorkFlowList(req types.GenericPageReq[dto.WorkflowIn
 	}
 
 	offset := (resp.PageNum - 1) * resp.PageSize
-	list, err := do.DefaultWorkFlowInfoManager.Page(offset, resp.PageSize)
+
+	workflowManager := do.NewWorkFlowInfoManager(service.db)
+	list, err := workflowManager.Page(offset, resp.PageSize)
 	if err != nil {
-		app.Log.Error("PageWorkFlowList Page", zap.Any("err", err))
+		service.logger.Error("PageWorkFlowList Page", zap.Any("err", err))
 		return nil, err
 	}
 
-	total, err := do.DefaultWorkFlowInfoManager.Count()
+	total, err := workflowManager.Count()
 	if err != nil {
-		app.Log.Error("PageWorkFlowList Count", zap.Any("err", err))
+		service.logger.Error("PageWorkFlowList Count", zap.Any("err", err))
 		return nil, err
 	}
 
@@ -75,7 +78,8 @@ func (service *Service) PageWorkFlowList(req types.GenericPageReq[dto.WorkflowIn
 }
 
 func (service *Service) ApproveWorkFlow(input *dto.WorkFlowApprovalDTO) error {
-	workflow, err := do.DefaultWorkFlowInfoManager.GetByID(input.WorkflowID)
+	workflowManager := do.NewWorkFlowInfoManager(service.db)
+	workflow, err := workflowManager.GetByID(input.WorkflowID)
 	if err != nil {
 		return fmt.Errorf("getById error: %w", err)
 	}
@@ -93,9 +97,10 @@ func (service *Service) ApproveWorkFlow(input *dto.WorkFlowApprovalDTO) error {
 		CreatedTime: time.Now(),
 	}
 
-	err = do.DefaultWorkFlowApproveManager.Create(approve)
+	workflowApproveManager := do.NewWorkFlowApproveManager(service.db)
+	err = workflowApproveManager.Create(approve)
 	if err != nil {
-		app.Log.Error("PageWorkFlowList Count", zap.Any("err", err))
+		service.logger.Error("PageWorkFlowList Count", zap.Any("err", err))
 		return err
 	}
 

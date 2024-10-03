@@ -1,6 +1,8 @@
-package app
+package db
 
 import (
+	"go-project/main/config"
+	log2 "go-project/main/log"
 	"io"
 	"log"
 	"os"
@@ -14,18 +16,18 @@ import (
 	ormLogger "gorm.io/gorm/logger"
 )
 
-func InitializeDB(cfg *Configuration) *gorm.DB {
+func InitializeDB(cfg *config.Configuration, log *log2.ZapLogger) *gorm.DB {
 	switch cfg.MysqlDatabase.Driver {
 	case "mysql":
-		db := initMySqlGorm(cfg)
+		db := initMySqlGorm(cfg, log)
 		return db
 	default:
-		db := initMySqlGorm(cfg)
+		db := initMySqlGorm(cfg, log)
 		return db
 	}
 }
 
-func initMySqlGorm(cfg *Configuration) *gorm.DB {
+func initMySqlGorm(cfg *config.Configuration, log *log2.ZapLogger) *gorm.DB {
 	dbConfig := cfg.MysqlDatabase
 
 	if dbConfig.Database == "" {
@@ -34,7 +36,7 @@ func initMySqlGorm(cfg *Configuration) *gorm.DB {
 	dsn := dbConfig.UserName + ":" + dbConfig.Password + "@tcp(" + dbConfig.Host + ":" + strconv.Itoa(dbConfig.Port) + ")/" +
 		dbConfig.Database + "?charset=" + dbConfig.Charset + "&parseTime=True&loc=Local"
 
-	Log.Info("dsn " + dsn)
+	log.Info("dsn " + dsn)
 
 	mysqlConfig := mysql.Config{
 		DSN:                       dsn,
@@ -48,7 +50,7 @@ func initMySqlGorm(cfg *Configuration) *gorm.DB {
 		DisableForeignKeyConstraintWhenMigrating: true,
 		Logger:                                   getGormLogger(cfg),
 	}); err != nil {
-		Log.Error("mysql connect failed, err:", zap.Any("err", err))
+		log.Error("mysql connect failed, err:", zap.Any("err", err))
 		return nil
 	} else {
 		sqlDB, _ := db.DB()
@@ -58,7 +60,7 @@ func initMySqlGorm(cfg *Configuration) *gorm.DB {
 	}
 }
 
-func getGormLogger(cfg *Configuration) ormLogger.Interface {
+func getGormLogger(cfg *config.Configuration) ormLogger.Interface {
 	var logMode ormLogger.LogLevel
 
 	switch cfg.MysqlDatabase.LogMode {
@@ -82,7 +84,7 @@ func getGormLogger(cfg *Configuration) ormLogger.Interface {
 	})
 }
 
-func getGormLogWriter(cfg *Configuration) ormLogger.Writer {
+func getGormLogWriter(cfg *config.Configuration) ormLogger.Writer {
 	var writer io.Writer
 
 	if cfg.MysqlDatabase.EnableFileLogWriter {

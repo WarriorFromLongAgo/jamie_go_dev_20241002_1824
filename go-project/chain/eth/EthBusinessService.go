@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"gorm.io/gorm"
 	"math/big"
 	"time"
 
@@ -20,12 +21,14 @@ import (
 type BusinessService struct {
 	ethClient   EthClient
 	erc20Client TestErc20Client
+	db          *gorm.DB
 }
 
-func NewEthBusinessService(ethClient EthClient, erc20Client TestErc20Client) *BusinessService {
+func NewEthBusinessService(ethClient EthClient, erc20Client TestErc20Client, db *gorm.DB) *BusinessService {
 	return &BusinessService{
 		ethClient:   ethClient,
 		erc20Client: erc20Client,
+		db:          db,
 	}
 }
 
@@ -68,7 +71,8 @@ func (s *BusinessService) TransferERC20(
 		CreateAddr:      fromAddress.Hex(),
 		CreatedTime:     time.Now(),
 	}
-	err = do.DefaultTokenTransferLogManager.Create(transferLog)
+	tokenTransferLogManager := do.NewTokenTransferLogManager(s.db)
+	err = tokenTransferLogManager.Create(transferLog)
 	if err != nil {
 		return fmt.Errorf("create TokenTransferLog: %w", err)
 	}
@@ -76,14 +80,14 @@ func (s *BusinessService) TransferERC20(
 	err = s.waitForTransaction(ctx, txHash)
 	if err != nil {
 		log.Error("TransferERC20 Transfer waitForTransaction", "err", err)
-		err := do.DefaultTokenTransferLogManager.UpdateStatus(transferLog.ID, do.StatusFailed, "", "")
+		err := tokenTransferLogManager.UpdateStatus(transferLog.ID, do.StatusFailed, "", "")
 		if err != nil {
 			return fmt.Errorf("TransferERC20 Transfer waitForTransaction: %w", err)
 		}
 		return nil
 	}
 
-	err = do.DefaultTokenTransferLogManager.UpdateStatus(transferLog.ID, do.StatusSuccess, "", "")
+	err = tokenTransferLogManager.UpdateStatus(transferLog.ID, do.StatusSuccess, "", "")
 	if err != nil {
 		return fmt.Errorf("TransferERC20 Transfer waitForTransaction: %w", err)
 	}

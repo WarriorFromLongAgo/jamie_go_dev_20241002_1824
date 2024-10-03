@@ -1,6 +1,7 @@
-package app
+package log
 
 import (
+	"go-project/main/config"
 	"os"
 	"time"
 
@@ -16,39 +17,40 @@ var (
 	options []zap.Option
 )
 
-type zapLogger struct {
+type ZapLogger struct {
 	logger *zap.Logger
 }
 
-func NewLogger(cfg *Configuration) (Logger, error) {
+func NewLogger(cfg *config.Configuration) (*ZapLogger, error) {
 	createRootDir(cfg)
 	setLogLevel(cfg)
 
 	if cfg.Log.ShowLine {
 		options = append(options, zap.AddCaller())
 	}
-	return zap.New(getZapCore(cfg), options...), nil
+	zapLogger := zap.New(getZapCore(cfg), options...)
+	return &ZapLogger{logger: zapLogger}, nil
 }
 
-func (l *zapLogger) Info(msg string, fields ...zap.Field) {
+func (l *ZapLogger) Info(msg string, fields ...zap.Field) {
 	l.logger.Info(msg, fields...)
 }
 
-func (l *zapLogger) Error(msg string, fields ...zap.Field) {
+func (l *ZapLogger) Error(msg string, fields ...zap.Field) {
 	l.logger.Error(msg, fields...)
 }
 
-func (l *zapLogger) Fatal(msg string, fields ...zap.Field) {
+func (l *ZapLogger) Fatal(msg string, fields ...zap.Field) {
 	l.logger.Fatal(msg, fields...)
 }
 
-func createRootDir(cfg *Configuration) {
+func createRootDir(cfg *config.Configuration) {
 	if ok, _ := file.PathExists(cfg.Log.RootDir); !ok {
 		_ = os.Mkdir(cfg.Log.RootDir, os.ModePerm)
 	}
 }
 
-func setLogLevel(cfg *Configuration) {
+func setLogLevel(cfg *config.Configuration) {
 	switch cfg.Log.Level {
 	case "debug":
 		level = zap.DebugLevel
@@ -71,7 +73,7 @@ func setLogLevel(cfg *Configuration) {
 	}
 }
 
-func getZapCore(cfg *Configuration) zapcore.Core {
+func getZapCore(cfg *config.Configuration) zapcore.Core {
 	var encoder zapcore.Encoder
 
 	encoderConfig := zap.NewProductionEncoderConfig()
@@ -91,7 +93,7 @@ func getZapCore(cfg *Configuration) zapcore.Core {
 	return zapcore.NewCore(encoder, getLogWriter(cfg), level)
 }
 
-func getLogWriter(cfg *Configuration) zapcore.WriteSyncer {
+func getLogWriter(cfg *config.Configuration) zapcore.WriteSyncer {
 	loggerFile := &lumberjack.Logger{
 		Filename:   cfg.Log.RootDir + "/" + cfg.Log.Filename,
 		MaxSize:    cfg.Log.MaxSize,

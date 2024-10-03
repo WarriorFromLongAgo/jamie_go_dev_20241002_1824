@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-
-	"go-project/main/app"
 )
 
 type BlockInfo struct {
@@ -23,17 +21,21 @@ func (BlockInfo) TableName() string {
 	return "block_info"
 }
 
-type BlockInfoManager struct{}
+type BlockInfoManager struct {
+	db *gorm.DB
+}
 
-var DefaultBlockInfoManager = &BlockInfoManager{}
+func NewBlockInfoManager(db *gorm.DB) *BlockInfoManager {
+	return &BlockInfoManager{db: db}
+}
 
 func (bm *BlockInfoManager) Create(block *BlockInfo) error {
-	return app.DB.Create(block).Error
+	return bm.db.Create(block).Error
 }
 
 func (bm *BlockInfoManager) GetLatestBlock() (*BlockInfo, error) {
 	var block BlockInfo
-	var result = app.DB.Order("block_number DESC").First(&block)
+	var result = bm.db.Order("block_number DESC").First(&block)
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -46,7 +48,7 @@ func (bm *BlockInfoManager) GetLatestBlock() (*BlockInfo, error) {
 
 func (bm *BlockInfoManager) GetLatestBlockNumber() (uint64, error) {
 	var block BlockInfo
-	var result = app.DB.Order("block_number DESC").First(&block)
+	var result = bm.db.Order("block_number DESC").First(&block)
 
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {

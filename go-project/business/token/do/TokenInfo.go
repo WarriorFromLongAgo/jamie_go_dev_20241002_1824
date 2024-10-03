@@ -1,6 +1,7 @@
 package do
 
 import (
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -22,6 +23,10 @@ func (TokenInfo) TableName() string {
 	return "token_info"
 }
 
-type TokenInfoManager struct{}
+type TokenInfoManager struct {
+	db *gorm.DB
+}
 
-var DefaultTokenInfoManager = &TokenInfoManager{}
+func NewTokenInfoManager(db *gorm.DB) *TokenInfoManager {
+	return &TokenInfoManager{db: db}
+}

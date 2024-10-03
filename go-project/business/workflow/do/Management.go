@@ -1,6 +1,7 @@
 package do
 
 import (
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -22,6 +23,10 @@ func (Management) TableName() string {
 	return "management"
 }
 
-type ManagementManager struct{}
+type ManagementManager struct {
+	db *gorm.DB
+}
 
-var DefaultManagementManager = &ManagementManager{}
+func NewManagementManager(db *gorm.DB) *ManagementManager {
+	return &ManagementManager{db: db}
+}

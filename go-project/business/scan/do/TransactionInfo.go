@@ -1,6 +1,7 @@
 package do
 
 import (
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -24,6 +25,10 @@ func (TransactionInfo) TableName() string {
 	return "transaction_info"
 }
 
-type TransactionInfoManager struct{}
+type TransactionInfoManager struct {
+	db *gorm.DB
+}
 
-var DefaultTransactionInfoManager = &TransactionInfoManager{}
+func NewTransactionInfoManager(db *gorm.DB) *TransactionInfoManager {
+	return &TransactionInfoManager{db: db}
+}

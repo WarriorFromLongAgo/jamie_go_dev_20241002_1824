@@ -1,13 +1,13 @@
 server:
   env: local
   port: 8888
-  app_name: gin-app
+  app_name: jamie-demo
   app_url: http://localhost
 
 log:
   level: info
   root_dir: ./log/logs
-  filename: app.log
+  filename: jamie-demo.log
   format:
   show_line: true
   max_backups: 100
@@ -27,4 +27,4 @@ mysqlDatabase:
   max_open_conns: 100
   log_mode: info
   enable_file_log_writer: true
-  log_filename: mysql.log
+  log_filename: jamie-demo-mysql.log

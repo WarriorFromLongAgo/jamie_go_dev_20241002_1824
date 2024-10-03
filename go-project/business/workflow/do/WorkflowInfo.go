@@ -2,7 +2,6 @@ package do
 
 import (
 	"errors"
-	"go-project/main/app"
 	"time"
 
 	"gorm.io/gorm"
@@ -25,17 +24,21 @@ func (WorkFlowInfo) TableName() string {
 	return "workflow_info"
 }
 
-type WorkFlowInfoManager struct{}
+type WorkFlowInfoManager struct {
+	db *gorm.DB
+}
 
-var DefaultWorkFlowInfoManager = &WorkFlowInfoManager{}
+func NewWorkFlowInfoManager(db *gorm.DB) *WorkFlowInfoManager {
+	return &WorkFlowInfoManager{db: db}
+}
 
 func (m *WorkFlowInfoManager) Create(info *WorkFlowInfo) error {
-	return app.DB.Create(info).Error
+	return m.db.Create(info).Error
 }
 
 func (m *WorkFlowInfoManager) GetByID(id int) (*WorkFlowInfo, error) {
 	var info WorkFlowInfo
-	err := app.DB.Where("id = ?", id).First(&info).Error
+	err := m.db.Where("id = ?", id).First(&info).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -47,16 +50,16 @@ func (m *WorkFlowInfoManager) GetByID(id int) (*WorkFlowInfo, error) {
 
 func (m *WorkFlowInfoManager) Page(offset, limit uint64) ([]WorkFlowInfo, error) {
 	var infos []WorkFlowInfo
-	err := app.DB.Offset(int(offset)).Limit(int(limit)).Find(&infos).Error
+	err := m.db.Offset(int(offset)).Limit(int(limit)).Find(&infos).Error
 	return infos, err
 }
 
 func (m *WorkFlowInfoManager) Count() (uint64, error) {
 	var count int64
-	err := app.DB.Model(&WorkFlowInfo{}).Count(&count).Error
+	err := m.db.Model(&WorkFlowInfo{}).Count(&count).Error
 	return uint64(count), err
 }
 
 func (m *WorkFlowInfoManager) Update(workflow *WorkFlowInfo) error {
-	return app.DB.Save(workflow).Error
+	return m.db.Save(workflow).Error
 }

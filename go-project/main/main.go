@@ -1,43 +1,40 @@
 package main
 
 import (
-	"go-project/business/workflow/service"
 	"go.uber.org/zap"
 
-	"go-project/main/app"
+	"go-project/main/config"
+	"go-project/main/db"
+	"go-project/main/log"
+	"go-project/main/server"
 )
 
 func main() {
-	cfg, err := app.LoadConfig()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		panic(err)
 	}
-	app.SetConfig(cfg)
 
-	log, err := app.NewLogger(cfg)
+	logger, err := log.NewLogger(cfg)
 	if err != nil {
 		panic(err)
 	}
-	app.SetLogger(log)
-	app.Log.Info("InitializeLog success")
+	logger.Info("NewLogger success")
 
-	db := app.InitializeDB(cfg)
-	app.SetDB(db)
-	app.Log.Info("InitializeDB InitializeDB")
+	dbb := db.InitializeDB(cfg, logger)
+	logger.Info("InitializeDB success")
 
 	defer func() {
-		if db != nil {
-			db, _ := db.DB()
-			err = db.Close()
+		if dbb != nil {
+			tempDb, _ := dbb.DB()
+			err = tempDb.Close()
 			if err != nil {
-				app.Log.Error("main db.Close", zap.Any("err", err))
+				logger.Error("main db.Close", zap.Any("err", err))
 				return
 			}
-			app.Log.Info("main db.Close success")
+			logger.Info("main db.Close success")
 		}
 	}()
 
-	service.NewService(app.Log, app.DB)
-
-	app.RunServer(cfg)
+	server.RunServer(cfg, logger, dbb)
 }

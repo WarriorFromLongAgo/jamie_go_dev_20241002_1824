@@ -3,6 +3,7 @@ package synchronizer
 import (
 	"context"
 	"fmt"
+	"gorm.io/gorm"
 	"math/big"
 	"time"
 
@@ -15,12 +16,14 @@ import (
 type Synchronizer struct {
 	ctx       context.Context
 	ethClient eth.EthClient
+	db        *gorm.DB
 }
 
-func NewSynchronizer(client eth.EthClient, ctx context.Context) (*Synchronizer, error) {
+func NewSynchronizer(client eth.EthClient, ctx context.Context, db *gorm.DB) (*Synchronizer, error) {
 	return &Synchronizer{
 		ctx:       ctx,
 		ethClient: client,
+		db:        db,
 	}, nil
 }
 
@@ -43,7 +46,8 @@ func (s *Synchronizer) Start() {
 }
 
 func (s *Synchronizer) scanBlocks() error {
-	dbLatestBlockNumber, err := do2.DefaultBlockInfoManager.GetLatestBlockNumber()
+	blockInfoManager := do2.NewBlockInfoManager(s.db)
+	dbLatestBlockNumber, err := blockInfoManager.GetLatestBlockNumber()
 	if err != nil {
 		return fmt.Errorf("获取最新扫描的区块号失败: %w", err)
 	}
@@ -65,7 +69,7 @@ func (s *Synchronizer) scanBlocks() error {
 	if err != nil {
 		return fmt.Errorf("获取区块头列表失败: %w", err)
 	}
-	err = s.processBlockHeaders(headers)
+	err = s.processBlockHeaders(headers, blockInfoManager)
 	if err != nil {
 		return fmt.Errorf("处理区块头失败: %w", err)
 	}
@@ -74,10 +78,10 @@ func (s *Synchronizer) scanBlocks() error {
 	return nil
 }
 
-func (s *Synchronizer) processBlockHeaders(headers []types.Header) error {
+func (s *Synchronizer) processBlockHeaders(headers []types.Header, blockInfoManager *do2.BlockInfoManager) error {
 	for _, header := range headers {
 
-		err := do2.DefaultBlockInfoManager.Create(&do2.BlockInfo{
+		err := blockInfoManager.Create(&do2.BlockInfo{
 			BlockNumber: header.Number.Uint64(),
 			BlockHash:   header.Hash().Hex(),
 			Timestamp:   time.Unix(int64(header.Time), 0),

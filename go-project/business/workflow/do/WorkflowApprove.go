@@ -1,7 +1,7 @@
 package do
 
 import (
-	"go-project/main/app"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -23,10 +23,14 @@ func (WorkFlowApprove) TableName() string {
 	return "workflow_approve"
 }
 
-type WorkFlowApproveManager struct{}
+type WorkFlowApproveManager struct {
+	db *gorm.DB
+}
 
-var DefaultWorkFlowApproveManager = &WorkFlowApproveManager{}
+func NewWorkFlowApproveManager(db *gorm.DB) *WorkFlowApproveManager {
+	return &WorkFlowApproveManager{db: db}
+}
 
 func (m *WorkFlowApproveManager) Create(approve *WorkFlowApprove) error {
-	return app.DB.Create(approve).Error
+	return m.db.Create(approve).Error
 }

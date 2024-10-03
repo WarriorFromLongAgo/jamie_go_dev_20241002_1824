@@ -1,7 +1,7 @@
 package do
 
 import (
-	"go-project/main/app"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -32,12 +32,16 @@ func (TokenTransferLog) TableName() string {
 	return "token_transfer_log"
 }
 
-type TokenTransferLogManager struct{}
+type TokenTransferLogManager struct {
+	db *gorm.DB
+}
 
-var DefaultTokenTransferLogManager = &TokenTransferLogManager{}
+func NewTokenTransferLogManager(db *gorm.DB) *TokenTransferLogManager {
+	return &TokenTransferLogManager{db: db}
+}
 
 func (r *TokenTransferLogManager) UpdateStatus(id int, status string, updatedBy, updatedAddr string) error {
-	return app.DB.Model(&TokenTransferLog{}).
+	return r.db.Model(&TokenTransferLog{}).
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
 			"status":       status,
@@ -48,5 +52,5 @@ func (r *TokenTransferLogManager) UpdateStatus(id int, status string, updatedBy,
 }
 
 func (r *TokenTransferLogManager) Create(log *TokenTransferLog) error {
-	return app.DB.Create(log).Error
+	return r.db.Create(log).Error
 }
