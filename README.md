@@ -5,6 +5,11 @@
 ```
 go version: 1.22.5
 
+go get -u gorm.io/driver/mysql
+go get -u gorm.io/gorm
+go get -u github.com/ethereum/go-ethereum
+go get -u github.com/gin-gonic/gin
+
 ```
 
 ## run

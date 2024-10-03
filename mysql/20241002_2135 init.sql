@@ -61,7 +61,9 @@ CREATE TABLE workflow_configuration
     value       varchar(64)   not null,
     description varchar(1024) NOT NULL COMMENT 'workflow description'
 ) COMMENT 'workflow_configuration';
-insert into workflow_configuration(id, code, value, description) value (null, 'finalize_num', 64, 'eth slot safe finalize');
+insert into workflow_configuration(id, code, value, description) value (null, 'eth_finalize_num', 64, 'eth slot safe finalize');
+insert into workflow_configuration(id, code, value, description) value (null, 'scan_start_block_num', 0, '');
+insert into workflow_configuration(id, code, value, description) value (null, 'scan_single_quantity', 100, '');
 
 # CREATE TABLE scheduled_log
 # (
@@ -138,7 +140,7 @@ CREATE TABLE IF NOT EXISTS transaction_info
     token_address     VARCHAR(128)    NOT NULL,
     gas_fee           bigint          NOT NULL,
     amount            bigint          NOT NULL comment 'tx transfer token/eth amount',
-    status            SMALLINT        NOT NULL DEFAULT 0 comment 'receipt_statue,0=pending,1=success,2=failed',
+    status            SMALLINT        NOT NULL DEFAULT 0 comment 'receipt_statue,0=failed,1=success',
     transaction_index bigint          NOT NULL comment 'tx index in one block',
     tx_type           SMALLINT        NOT NULL DEFAULT 0 comment 'tx type,0=Legacy,2=DynamicFee,3=Blob',
     created_time      TIMESTAMP                DEFAULT CURRENT_TIMESTAMP COMMENT 'created_time',

@@ -35,7 +35,7 @@ const (
 )
 
 type EthClient interface {
-	BlockHeaderByNumber(*big.Int) (*types.Header, error)
+	// BlockHeaderByNumber(*big.Int) (*types.Header, error)
 	// LatestSafeBlockHeader() (*types.Header, error)
 	LatestFinalizedBlockHeader() (*types.Header, error)
 	BlockHeaderByBlockHash(common.Hash) (*types.Header, error)
@@ -67,7 +67,6 @@ func DialEthClient(ctx context.Context, rpcUrl string) (EthClient, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to dial address (%s): %w", rpcUrl, err)
 		}
-
 		return client, nil
 	})
 
@@ -78,23 +77,22 @@ func DialEthClient(ctx context.Context, rpcUrl string) (EthClient, error) {
 	return &client{rpc: rpc.NewRPC(rpcClient)}, nil
 }
 
-func (c *client) BlockHeaderByNumber(number *big.Int) (*types.Header, error) {
-	ctxwt, cancel := context.WithTimeout(context.Background(), defaultRequestTimeout)
-	defer cancel()
-
-	var header *types.Header
-	err := c.rpc.CallContext(ctxwt, &header, "eth_getBlockByNumber", toBlockNumArg(number), false)
-	if err != nil {
-
-		log.Error("Call eth_getBlockByNumber method fail", "err", err)
-		return nil, err
-	} else if header == nil {
-		log.Warn("header not found")
-		return nil, ethereum.NotFound
-	}
-
-	return header, nil
-}
+//func (c *client) BlockHeaderByNumber(number *big.Int) (*types.Header, error) {
+//	ctxwt, cancel := context.WithTimeout(context.Background(), defaultRequestTimeout)
+//	defer cancel()
+//
+//	var header *types.Header
+//	err := c.rpc.CallContext(ctxwt, &header, "eth_getBlockByNumber", toBlockNumArg(number), false)
+//	if err != nil {
+//		log.Error("Call eth_getBlockByNumber method fail", "err", err)
+//		return nil, err
+//	} else if header == nil {
+//		log.Warn("header not found")
+//		return nil, ethereum.NotFound
+//	}
+//
+//	return header, nil
+//}
 
 //
 //func (c *client) LatestSafeBlockHeader() (*types.Header, error) {
@@ -149,11 +147,7 @@ func (c *client) BlockHeaderByBlockHash(hash common.Hash) (*types.Header, error)
 
 func (c *client) BlockHeaderListByRange(startHeight, endHeight *big.Int) ([]types.Header, error) {
 	if startHeight.Cmp(endHeight) == 0 {
-		header, err := c.BlockHeaderByNumber(startHeight)
-		if err != nil {
-			return nil, err
-		}
-		return []types.Header{*header}, nil
+		return []types.Header{}, nil
 	}
 
 	count := new(big.Int).Sub(endHeight, startHeight).Uint64() + 1
