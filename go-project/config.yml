@@ -17,7 +17,7 @@ log:
 
 mysqlDatabase:
   driver: mysql
-  host: 127.0.0.1
+  host: 192.168.101.55
   port: 3306
   database: workflow_management
   username: root
