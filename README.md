@@ -1,10 +1,20 @@
 # jamie_go_dev_20241002_1824
 
 # go-project
+## env
 ```
 go version: 1.22.5
 
 ```
+
+## run
+```
+index = scan block
+
+api = api server
+
+```
+
 
 # test-erc20-project
 ## env

@@ -15,10 +15,14 @@ require (
 	github.com/ethereum/go-ethereum v1.14.11 // indirect
 	github.com/ethereum/go-verkle v0.1.1-0.20240829091221-dffa7562dbe9 // indirect
 	github.com/holiman/uint256 v1.3.1 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/supranational/blst v0.3.13 // indirect
 	golang.org/x/crypto v0.27.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/text v0.18.0 // indirect
+	gorm.io/gorm v1.25.12 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
