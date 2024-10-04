@@ -12,6 +12,7 @@ type WorkFlowInfo struct {
 	WorkflowName string    `gorm:"column:workflow_name;not null;type:VARCHAR(128)" json:"workflow_name"`
 	ToAddr       string    `gorm:"column:to_addr;not null;type:VARCHAR(64)" json:"to_addr"`
 	Description  string    `gorm:"column:description;not null;type:VARCHAR(1024)" json:"description"`
+	Status       string    `gorm:"column:status;type:ENUM('pending','approved','rejected');default:pending" json:"status"`
 	CreateBy     string    `gorm:"column:create_by;not null;type:VARCHAR(64)" json:"create_by"`
 	CreateAddr   string    `gorm:"column:create_addr;not null;type:VARCHAR(64)" json:"create_addr"`
 	CreatedTime  time.Time `gorm:"column:created_time;default:CURRENT_TIMESTAMP" json:"created_time"`

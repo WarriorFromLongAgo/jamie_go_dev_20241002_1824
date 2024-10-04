@@ -19,7 +19,7 @@ type Synchronizer struct {
 	db        *gorm.DB
 }
 
-func NewSynchronizer(client eth.EthClient, ctx context.Context, db *gorm.DB) (*Synchronizer, error) {
+func NewSynchronizer(ctx context.Context, client eth.EthClient, db *gorm.DB) (*Synchronizer, error) {
 	return &Synchronizer{
 		ctx:       ctx,
 		ethClient: client,

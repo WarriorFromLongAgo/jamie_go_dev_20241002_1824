@@ -1,6 +1,9 @@
 package main
 
 import (
+	"context"
+	"go-project/chain/eth"
+	"go-project/synchronizer"
 	"go.uber.org/zap"
 
 	"go-project/main/config"
@@ -35,6 +38,18 @@ func main() {
 			logger.Info("main db.Close success")
 		}
 	}()
+
+	ctx := context.Background()
+	ethClient, err := eth.DialEthClient(ctx, "http://127.0.0.1:8545")
+	if err != nil {
+		logger.Fatal("Failed to create Ethereum client", zap.Error(err))
+	}
+
+	sync, err := synchronizer.NewSynchronizer(ctx, ethClient, dbb)
+	if err != nil {
+		logger.Fatal("Failed to create Synchronizer", zap.Error(err))
+	}
+	go sync.Start()
 
 	server.RunServer(cfg, logger, dbb)
 }

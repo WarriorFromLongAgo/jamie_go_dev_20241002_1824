@@ -4,15 +4,16 @@ USE workflow_management;
 CREATE TABLE workflow_info
 (
     id            INT AUTO_INCREMENT PRIMARY KEY COMMENT 'workflow id',
-    workflow_name VARCHAR(128)  NOT NULL,
-    to_addr       varchar(64)   not null,
-    description   varchar(1024) NOT NULL COMMENT 'workflow description',
-    create_by     varchar(64)   not null comment 'create_by user_id',
-    create_addr   varchar(64)   not null comment 'create_addr',
-    created_time  datetime DEFAULT CURRENT_TIMESTAMP COMMENT 'created_time',
-    updated_by    varchar(64)   null comment 'updated_by user_id',
-    updated_addr  varchar(64)   null comment 'updated_addr',
-    updated_time  datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'updated_time'
+    workflow_name VARCHAR(128)                             NOT NULL,
+    to_addr       varchar(64)                              not null,
+    description   varchar(1024)                            NOT NULL COMMENT 'workflow description',
+    status        ENUM ('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending' COMMENT 'workflow status,default pending',
+    create_by     varchar(64)                              not null comment 'create_by user_id',
+    create_addr   varchar(64)                              not null comment 'create_addr',
+    created_time  datetime                                          DEFAULT CURRENT_TIMESTAMP COMMENT 'created_time',
+    updated_by    varchar(64)                              null comment 'updated_by user_id',
+    updated_addr  varchar(64)                              null comment 'updated_addr',
+    updated_time  datetime                                          DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'updated_time'
 ) COMMENT 'workflow_info';
 
 CREATE TABLE workflow_approve

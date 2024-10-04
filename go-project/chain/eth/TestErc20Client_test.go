@@ -1,0 +1,77 @@
+package eth
+
+import (
+	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"math/big"
+	"testing"
+	"time"
+)
+
+func TestTestErc20Client_BalanceOf(t *testing.T) {
+	ctx := context.Background()
+	erc20Client, err := NewTestErc20Client(ctx, "http://127.0.0.1:8545", "0x700b6A60ce7EaaEA56F065753d8dcB9653dbAD35")
+	if err != nil {
+		t.Fatalf("Failed to create TestErc20Client: %v", err)
+	}
+	address := common.HexToAddress("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720")
+	balanceOf, err := erc20Client.BalanceOf(ctx, address)
+	if err != nil {
+		t.Fatalf("Failed to get balance: %v", err)
+	}
+	t.Logf("TestTestErc20Client_BalanceOf: %s", balanceOf.String())
+}
+
+func TestTestErc20Client_ApproveAndTransfer(t *testing.T) {
+	ctx := context.Background()
+	erc20Client, err := NewTestErc20Client(ctx, "http://127.0.0.1:8545", "0x700b6A60ce7EaaEA56F065753d8dcB9653dbAD35")
+	if err != nil {
+		t.Fatalf("Failed to create TestErc20Client: %v", err)
+	}
+
+	fromAddress := common.HexToAddress("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720")
+	toAddress := common.HexToAddress("0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f")
+
+	printBalance(t, ctx, erc20Client, fromAddress, "From")
+	printBalance(t, ctx, erc20Client, toAddress, "To")
+
+	privateKey, err := crypto.HexToECDSA("2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6")
+	if err != nil {
+		t.Fatalf("Failed to create private key: %v", err)
+	}
+
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(31337))
+	if err != nil {
+		t.Fatalf("Failed to create auth: %v", err)
+	}
+
+	amount := big.NewInt(9 * 1e6)
+	approveHash, err := erc20Client.Approve(auth, toAddress, amount)
+	if err != nil {
+		t.Fatalf("Failed to approve: %v", err)
+	}
+	t.Logf("Approve transaction hash: %s", approveHash.Hex())
+
+	time.Sleep(5 * time.Second)
+
+	transferHash, err := erc20Client.Transfer(auth, toAddress, amount)
+	if err != nil {
+		t.Fatalf("Failed to transfer: %v", err)
+	}
+	t.Logf("Transfer transaction hash: %s", transferHash.Hex())
+
+	time.Sleep(5 * time.Second)
+
+	printBalance(t, ctx, erc20Client, fromAddress, "From")
+	printBalance(t, ctx, erc20Client, toAddress, "To")
+}
+
+func printBalance(t *testing.T, ctx context.Context, client *TestErc20Client, address common.Address, label string) {
+	balance, err := client.BalanceOf(ctx, address)
+	if err != nil {
+		t.Fatalf("Failed to get balance for %s address: %v", label, err)
+	}
+	t.Logf("%s address balance: %s", label, balance.String())
+}
