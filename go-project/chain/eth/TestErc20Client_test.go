@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	global_const "go-project/common"
 	"math/big"
 	"testing"
 	"time"
@@ -34,15 +35,15 @@ func TestTestErc20Client_ApproveAndTransfer(t *testing.T) {
 	fromAddress := common.HexToAddress("0xa0Ee7A142d267C1f36714E4a8F75612F20a79720")
 	toAddress := common.HexToAddress("0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f")
 
-	printBalance(t, ctx, erc20Client, fromAddress, "From")
-	printBalance(t, ctx, erc20Client, toAddress, "To")
+	printERC20Balance(t, ctx, erc20Client, fromAddress, "From")
+	printERC20Balance(t, ctx, erc20Client, toAddress, "To")
 
-	privateKey, err := crypto.HexToECDSA("2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6")
+	privateKey, err := crypto.HexToECDSA(global_const.OWNER_PRV_KEY)
 	if err != nil {
 		t.Fatalf("Failed to create private key: %v", err)
 	}
 
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(31337))
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(global_const.ChainId))
 	if err != nil {
 		t.Fatalf("Failed to create auth: %v", err)
 	}
@@ -64,11 +65,11 @@ func TestTestErc20Client_ApproveAndTransfer(t *testing.T) {
 
 	time.Sleep(5 * time.Second)
 
-	printBalance(t, ctx, erc20Client, fromAddress, "From")
-	printBalance(t, ctx, erc20Client, toAddress, "To")
+	printERC20Balance(t, ctx, erc20Client, fromAddress, "From")
+	printERC20Balance(t, ctx, erc20Client, toAddress, "To")
 }
 
-func printBalance(t *testing.T, ctx context.Context, client *TestErc20Client, address common.Address, label string) {
+func printERC20Balance(t *testing.T, ctx context.Context, client *TestErc20Client, address common.Address, label string) {
 	balance, err := client.BalanceOf(ctx, address)
 	if err != nil {
 		t.Fatalf("Failed to get balance for %s address: %v", label, err)

@@ -42,7 +42,14 @@ type EthClient interface {
 	BlockHeaderListByRange(*big.Int, *big.Int) ([]types.Header, error)
 
 	TxByTxHash(common.Hash) (*types.Transaction, error)
+
 	TxReceiptByTxHash(common.Hash) (*types.Receipt, error)
+	TxCountByAddress(common.Address) (hexutil.Uint64, error)
+	SuggestGasPrice() (*big.Int, error)
+	SuggestGasTipCap() (*big.Int, error)
+	SendRawTransaction(rawTx string) error
+
+	BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error)
 
 	// Close closes the underlying RPC connection.
 	// RPC close does not return any errors, but does shut down e.g. a websocket connection.
@@ -265,6 +272,15 @@ func (c *client) SendRawTransaction(rawTx string) error {
 	}
 	log.Info("send tx to ethereum success")
 	return nil
+}
+
+func (c *client) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
+	var result hexutil.Big
+	err := c.rpc.CallContext(ctx, &result, "eth_getBalance", account, toBlockNumArg(blockNumber))
+	if err != nil {
+		return nil, err
+	}
+	return (*big.Int)(&result), nil
 }
 
 func (c *client) Close() {

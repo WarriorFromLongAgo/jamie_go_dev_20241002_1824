@@ -51,7 +51,7 @@ func (s *BusinessService) TransferERC20(
 	if err != nil {
 		return fmt.Errorf("TransferERC20 Approve: %w", err)
 	}
-	err = s.waitForTransaction(ctx, approveHash)
+	err = WaitForTransaction(ctx, s.ethClient, approveHash)
 	if err != nil {
 		return fmt.Errorf("TransferERC20 Approve waitForTransaction: %w", err)
 	}
@@ -77,7 +77,7 @@ func (s *BusinessService) TransferERC20(
 		return fmt.Errorf("create TokenTransferLog: %w", err)
 	}
 
-	err = s.waitForTransaction(ctx, txHash)
+	err = WaitForTransaction(ctx, s.ethClient, txHash)
 	if err != nil {
 		log.Error("TransferERC20 Transfer waitForTransaction", "err", err)
 		err := tokenTransferLogManager.UpdateStatus(transferLog.ID, do.StatusFailed, "", "")
@@ -95,25 +95,30 @@ func (s *BusinessService) TransferERC20(
 	return nil
 }
 
-func (s *BusinessService) waitForTransaction(ctx context.Context, txHash common.Hash) error {
-	for {
+func WaitForTransaction(ctx context.Context, ethClient EthClient, txHash common.Hash) error {
+	retries := 30
+	for i := 0; i < retries; i++ {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("TxReceipt timeout")
+			return fmt.Errorf("交易等待超时")
 		default:
-			receipt, err := s.ethClient.TxReceiptByTxHash(txHash)
+			receipt, err := ethClient.TxReceiptByTxHash(txHash)
 			if err != nil {
-				return fmt.Errorf("TxReceipt error: %w", err)
+				if err.Error() == "not found" {
+					time.Sleep(2 * time.Second)
+					continue
+				}
+				return fmt.Errorf("获取交易收据失败: %w", err)
 			}
-
 			if receipt != nil {
 				if receipt.Status == types.ReceiptStatusSuccessful {
 					return nil
 				} else {
-					return fmt.Errorf("TxReceipt error")
+					return fmt.Errorf("交易失败")
 				}
 			}
-			time.Sleep(5 * time.Second)
+			time.Sleep(2 * time.Second)
 		}
 	}
+	return fmt.Errorf("交易确认超时")
 }
