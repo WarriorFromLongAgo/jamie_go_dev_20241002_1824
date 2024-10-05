@@ -4,53 +4,89 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"gorm.io/gorm"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
+	"go.uber.org/zap"
 
-	"go-project/business/token/do"
 	globalconst "go-project/common"
+	"go-project/main/log"
 )
 
 type BusinessService struct {
 	ethClient   EthClient
 	erc20Client TestErc20Client
-	db          *gorm.DB
+	log         *log.ZapLogger
 }
 
-func NewEthBusinessService(ethClient EthClient, erc20Client TestErc20Client, db *gorm.DB) *BusinessService {
+func NewEthBusinessService(ethClient EthClient, erc20Client TestErc20Client, log *log.ZapLogger) *BusinessService {
 	return &BusinessService{
 		ethClient:   ethClient,
 		erc20Client: erc20Client,
-		db:          db,
+		log:         log,
 	}
 }
 
 func (s *BusinessService) TransferERC20(
 	ctx context.Context,
 	prvKey *ecdsa.PrivateKey,
-	tokenInfoID int,
+	fromAddress string,
 	toAddress string,
+	contractAddress string,
 	amount *big.Int,
-) error {
-	fromAddress := crypto.PubkeyToAddress(prvKey.PublicKey)
+) (string, []byte, error) {
+	maxRetries := 3
+	var lastErr error
+	var txHash string
+	var data []byte
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		hash, transferData, err := s.attemptTransferERC20(ctx, prvKey, fromAddress, toAddress, contractAddress, amount)
+		if err == nil {
+			return hash, transferData, nil // 交易成功，返回交易哈希和data数组
+		}
+
+		lastErr = err
+		s.log.Error("TransferERC20 尝试失败，准备重试", zap.Int("尝试次数", attempt+1), zap.Error(err))
+
+		if attempt < maxRetries-1 {
+			time.Sleep(3 * time.Second) // 在重试之前等待一段时间
+		}
+		txHash = hash       // 保存最后一次尝试的交易哈希
+		data = transferData // 保存最后一次尝试的data数组
+	}
+
+	return txHash, data, fmt.Errorf("TransferERC20 在 %d 次尝试后失败: %w", maxRetries, lastErr)
+}
+
+func (s *BusinessService) attemptTransferERC20(
+	ctx context.Context,
+	prvKey *ecdsa.PrivateKey,
+	fromAddress string,
+	toAddress string,
+	contractAddress string,
+	amount *big.Int,
+) (string, []byte, error) {
+	from := common.HexToAddress(fromAddress)
 	to := common.HexToAddress(toAddress)
 
-	nonce, err := s.ethClient.TxCountByAddress(fromAddress)
+	nonce, err := s.ethClient.TxCountByAddress(from)
 	if err != nil {
-		return fmt.Errorf("TransferERC20 get nonce: %w", err)
+		return "", nil, fmt.Errorf("获取nonce失败: %w", err)
 	}
 
 	gasPrice, err := s.ethClient.SuggestGasPrice()
 	if err != nil {
-		return fmt.Errorf("TransferERC20 get gas price: %w", err)
+		return "", nil, fmt.Errorf("获取gas价格失败: %w", err)
 	}
+
+	// 增加 gas 价格以提高交易成功率
+	adjustedGasPrice := new(big.Int).Mul(gasPrice, big.NewInt(120))
+	adjustedGasPrice = adjustedGasPrice.Div(adjustedGasPrice, big.NewInt(100))
 
 	transferFnSignature := []byte("transfer(address,uint256)")
 	hash := crypto.Keccak256(transferFnSignature)
@@ -63,63 +99,37 @@ func (s *BusinessService) TransferERC20(
 	data = append(data, paddedAddress...)
 	data = append(data, paddedAmount...)
 
-	erc20Address := common.HexToAddress(globalconst.TEMP_TEST_ERC20_ADDRESS)
-	tx := types.NewTransaction(uint64(nonce), erc20Address, big.NewInt(0), 300000, gasPrice, data)
+	erc20Address := common.HexToAddress(contractAddress)
+	tx := types.NewTransaction(uint64(nonce), erc20Address, big.NewInt(0), 300000, adjustedGasPrice, data)
 
 	chainID := big.NewInt(globalconst.ChainId)
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), prvKey)
 	if err != nil {
-		return fmt.Errorf("TransferERC20 sign transaction: %w", err)
+		return "", data, fmt.Errorf("签名交易失败: %w", err)
 	}
 
 	rawTxBytes, err := signedTx.MarshalBinary()
 	if err != nil {
-		return fmt.Errorf("TransferERC20 serialize transaction: %w", err)
+		return "", data, fmt.Errorf("序列化交易失败: %w", err)
 	}
 	rawTxHex := hexutil.Encode(rawTxBytes)
 
 	err = s.ethClient.SendRawTransaction(rawTxHex)
 	if err != nil {
-		return fmt.Errorf("TransferERC20 send raw transaction: %w", err)
-	}
-
-	transferLog := &do.TokenTransferLog{
-		TokenInfoID:     tokenInfoID,
-		FromAddress:     fromAddress.Hex(),
-		ToAddress:       toAddress,
-		Amount:          amount.Uint64(),
-		Status:          do.StatusPending,
-		TransactionHash: signedTx.Hash().Hex(),
-		CreateBy:        globalconst.SystemUser,
-		CreateAddr:      fromAddress.Hex(),
-		CreatedTime:     time.Now(),
-	}
-	tokenTransferLogManager := do.NewTokenTransferLogManager(s.db)
-	err = tokenTransferLogManager.Create(transferLog)
-	if err != nil {
-		return fmt.Errorf("create TokenTransferLog: %w", err)
+		return signedTx.Hash().Hex(), data, fmt.Errorf("发送原始交易失败: %w", err)
 	}
 
 	err = WaitForTransaction(ctx, s.ethClient, signedTx.Hash())
 	if err != nil {
-		log.Error("TransferERC20 Transfer waitForTransaction", "err", err)
-		err := tokenTransferLogManager.UpdateStatus(transferLog.ID, do.StatusFailed, "", "")
-		if err != nil {
-			return fmt.Errorf("TransferERC20 Transfer waitForTransaction: %w", err)
-		}
-		return nil
+		return signedTx.Hash().Hex(), data, fmt.Errorf("等待交易确认失败: %w", err)
 	}
 
-	err = tokenTransferLogManager.UpdateStatus(transferLog.ID, do.StatusSuccess, "", "")
-	if err != nil {
-		return fmt.Errorf("TransferERC20 Transfer waitForTransaction: %w", err)
-	}
-	log.Info("TransferERC20 Transfer success", "txHash", signedTx.Hash().Hex())
-	return nil
+	s.log.Info("TransferERC20 交易成功", zap.String("txHash", signedTx.Hash().Hex()))
+	return signedTx.Hash().Hex(), data, nil
 }
 
 func WaitForTransaction(ctx context.Context, ethClient EthClient, txHash common.Hash) error {
-	retries := 30
+	retries := 3
 	for i := 0; i < retries; i++ {
 		select {
 		case <-ctx.Done():

@@ -6,19 +6,23 @@ import (
 )
 
 type TransactionInfo struct {
-	ID               int64     `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
-	BlockHash        string    `gorm:"column:block_hash;not null;type:VARCHAR(128)" json:"block_hash"`
-	BlockNumber      uint64    `gorm:"column:block_number;not null;index" json:"block_number"`
-	TxHash           string    `gorm:"column:tx_hash;not null;uniqueIndex;type:VARCHAR(128)" json:"tx_hash"`
-	FromAddress      string    `gorm:"column:from_address;not null;index;type:VARCHAR(64)" json:"from_address"`
-	ToAddress        string    `gorm:"column:to_address;not null;index;type:VARCHAR(128)" json:"to_address"`
-	TokenAddress     string    `gorm:"column:token_address;not null;type:VARCHAR(128)" json:"token_address"`
-	GasFee           int64     `gorm:"column:gas_fee;not null" json:"gas_fee"`
-	Amount           int64     `gorm:"column:amount;not null" json:"amount"`
-	Status           int16     `gorm:"column:status;not null;default:0" json:"status"`
-	TransactionIndex int64     `gorm:"column:transaction_index;not null" json:"transaction_index"`
-	TxType           int16     `gorm:"column:tx_type;not null;default:0" json:"tx_type"`
-	CreatedTime      time.Time `gorm:"column:created_time;default:CURRENT_TIMESTAMP" json:"created_time"`
+	ID               uint64    `gorm:"column:id;primaryKey;autoIncrement"`
+	BlockHash        string    `gorm:"column:block_hash;type:varchar(128);not null"`
+	BlockNumber      uint64    `gorm:"column:block_number;type:bigint unsigned;not null"`
+	TxHash           string    `gorm:"column:tx_hash;type:varchar(128);not null;uniqueIndex"`
+	FromAddress      string    `gorm:"column:from_address;type:varchar(64);not null;index"`
+	ToAddress        string    `gorm:"column:to_address;type:varchar(128);index"`
+	TokenAddress     string    `gorm:"column:token_address;type:varchar(128);index"`
+	Value            string    `gorm:"column:value;type:varchar(128);not null"`
+	GasPrice         string    `gorm:"column:gas_price;type:varchar(128);not null"`
+	GasLimit         uint64    `gorm:"column:gas_limit;type:bigint unsigned;not null"`
+	GasUsed          uint64    `gorm:"column:gas_used;type:bigint unsigned"`
+	Nonce            uint64    `gorm:"column:nonce;type:bigint unsigned;not null"`
+	TransactionIndex uint64    `gorm:"column:transaction_index;type:bigint unsigned;not null"`
+	Status           uint64    `gorm:"column:status;type:bigint unsigned"`
+	TxType           uint8     `gorm:"column:tx_type;type:tinyint unsigned;not null"`
+	Data             string    `gorm:"column:data;type:text"`
+	CreatedTime      time.Time `gorm:"column:created_time;type:timestamp;default:CURRENT_TIMESTAMP"`
 }
 
 func (TransactionInfo) TableName() string {
@@ -31,4 +35,8 @@ type TransactionInfoManager struct {
 
 func NewTransactionInfoManager(db *gorm.DB) *TransactionInfoManager {
 	return &TransactionInfoManager{db: db}
+}
+
+func (m *TransactionInfoManager) Create(info *TransactionInfo) error {
+	return m.db.Create(info).Error
 }

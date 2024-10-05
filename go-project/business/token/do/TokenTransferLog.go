@@ -1,8 +1,11 @@
 package do
 
 import (
-	"gorm.io/gorm"
+	"errors"
+	"fmt"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 const (
@@ -14,9 +17,12 @@ const (
 type TokenTransferLog struct {
 	ID              int       `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
 	TokenInfoID     int       `gorm:"column:token_info_id;not null" json:"token_info_id"`
+	WorkflowID      int       `gorm:"column:workflow_id;not null" json:"workflow_id"`
 	FromAddress     string    `gorm:"column:from_address;not null;type:VARCHAR(42)" json:"from_address"`
 	ToAddress       string    `gorm:"column:to_address;not null;type:VARCHAR(42)" json:"to_address"`
+	ContractAddress string    `gorm:"column:contract_address;not null;type:VARCHAR(42)" json:"contract_address"`
 	Amount          uint64    `gorm:"column:amount;not null" json:"amount"`
+	TransferData    string    `gorm:"column:transfer_data;not null;type:VARCHAR(512)" json:"transfer_data"`
 	Status          string    `gorm:"column:status;not null;type:ENUM('failed','success','pending');default:pending" json:"status"`
 	RetryCount      int       `gorm:"column:retry_count;not null;default:0" json:"retry_count"`
 	TransactionHash string    `gorm:"column:transaction_hash;not null;type:VARCHAR(66)" json:"transaction_hash"`
@@ -40,17 +46,52 @@ func NewTokenTransferLogManager(db *gorm.DB) *TokenTransferLogManager {
 	return &TokenTransferLogManager{db: db}
 }
 
-func (r *TokenTransferLogManager) UpdateStatus(id int, status string, updatedBy, updatedAddr string) error {
+func (r *TokenTransferLogManager) Update(log *TokenTransferLog) error {
 	return r.db.Model(&TokenTransferLog{}).
-		Where("id = ?", id).
+		Where("id = ?", log.ID).
 		Updates(map[string]interface{}{
-			"status":       status,
-			"updated_by":   updatedBy,
-			"updated_addr": updatedAddr,
-			"updated_time": time.Now(),
+			"token_info_id":    log.TokenInfoID,
+			"workflow_id":      log.WorkflowID,
+			"from_address":     log.FromAddress,
+			"to_address":       log.ToAddress,
+			"contract_address": log.ContractAddress,
+			"amount":           log.Amount,
+			"transfer_data":    log.TransferData,
+			"status":           log.Status,
+			"retry_count":      log.RetryCount,
+			"transaction_hash": log.TransactionHash,
+			"updated_by":       log.UpdatedBy,
+			"updated_addr":     log.UpdatedAddr,
+			"updated_time":     time.Now(),
 		}).Error
 }
 
 func (r *TokenTransferLogManager) Create(log *TokenTransferLog) error {
 	return r.db.Create(log).Error
+}
+
+func (r *TokenTransferLogManager) GetPendingTokenTransferLogs() ([]TokenTransferLog, error) {
+	var logs []TokenTransferLog
+
+	err := r.db.Where("status = ? AND retry_count <= ? and transaction_hash = ''", "pending", 3).
+		Limit(10).
+		Find(&logs).Error
+	if err != nil {
+		return nil, fmt.Errorf("GetPendingTokenTransferLogs err: %w", err)
+	}
+
+	return logs, nil
+}
+
+func (r *TokenTransferLogManager) GetByTxHashAndAddresses(txHash, from, to string) (*TokenTransferLog, error) {
+	var log TokenTransferLog
+	err := r.db.Where("transaction_hash = ? AND from_address = ? and status = 'pending'", txHash, from).
+		First(&log).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("GetByTxHashAndAddresses err: %w", err)
+	}
+	return &log, nil
 }

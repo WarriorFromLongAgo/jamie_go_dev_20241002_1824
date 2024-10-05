@@ -7,10 +7,17 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	WorkFlowStatusPending  = "pending"
+	WorkFlowStatusApproved = "approved"
+	WorkFlowStatusRejected = "rejected"
+)
+
 type WorkFlowInfo struct {
 	ID           int       `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
 	WorkflowName string    `gorm:"column:workflow_name;not null;type:VARCHAR(128)" json:"workflow_name"`
 	ToAddr       string    `gorm:"column:to_addr;not null;type:VARCHAR(64)" json:"to_addr"`
+	TokenInfoID  int       `gorm:"column:token_info_id;not null" json:"token_info_id"`
 	Description  string    `gorm:"column:description;not null;type:VARCHAR(1024)" json:"description"`
 	Status       string    `gorm:"column:status;type:ENUM('pending','approved','rejected');default:pending" json:"status"`
 	CreateBy     string    `gorm:"column:create_by;not null;type:VARCHAR(64)" json:"create_by"`
@@ -64,3 +71,13 @@ func (m *WorkFlowInfoManager) Count() (uint64, error) {
 func (m *WorkFlowInfoManager) Update(workflow *WorkFlowInfo) error {
 	return m.db.Save(workflow).Error
 }
+
+//func (m *WorkFlowInfoManager) GetPendingWorkflows(limit int) ([]*WorkFlowInfo, error) {
+//	var workflows []*WorkFlowInfo
+//	err := m.db.Where("status = ?", WorkFlowStatusApproved).
+//		Joins("LEFT JOIN token_transfer_log ON workflow_info.id = token_transfer_log.workflow_id").
+//		Where("token_transfer_log.id IS NULL").
+//		Limit(limit).
+//		Find(&workflows).Error
+//	return workflows, err
+//}

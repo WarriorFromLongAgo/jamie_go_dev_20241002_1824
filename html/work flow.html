@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作流管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+
+        input,
+        button,
+        select {
+            width: 100%;
+            padding: 5px;
+            margin-top: 5px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #result {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>工作流管理</h1>
+
+    <form id="createForm">
+        <h2>创建工作流</h2>
+        <label for="workflowName">工作流名称:</label>
+        <input type="text" id="workflowName" required>
+        <label for="toAddr">目标地址:</label>
+        <select id="toAddrSelect" onchange="updateToAddr()">
+            <option value="">-- 选择地址或输入自定义地址 --</option>
+            <option value="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266">anthn
+                (0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)</option>
+            <option value="0x70997970C51812dc3A010C7d01b50e0d17dc79C8">authz
+                (0x70997970C51812dc3A010C7d01b50e0d17dc79C8)</option>
+            <option value="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC">test1
+                (0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC)</option>
+            <option value="0x90F79bf6EB2c4f870365E785982E1f101E93b906">test2
+                (0x90F79bf6EB2c4f870365E785982E1f101E93b906)</option>
+        </select>
+        <input type="text" id="toAddr" required>
+        <label for="description">描述:</label>
+        <input type="text" id="description">
+        <button type="submit">创建工作流</button>
+    </form>
+
+    <form id="listForm">
+        <h2>工作流列表</h2>
+        <label for="pageNum">页码:</label>
+        <input type="number" id="pageNum" value="1" min="1" required>
+        <label for="pageSize">每页数量:</label>
+        <input type="number" id="pageSize" value="10" min="1" required>
+        <button type="submit">获取列表</button>
+    </form>
+
+    <form id="approveForm">
+        <h2>审批工作流</h2>
+        <label for="workflowID">工作流ID:</label>
+        <input type="number" id="workflowID" required>
+        <label for="approvalStatus">审批状态:</label>
+        <select id="approvalStatus" required>
+            <option value="approved">通过</option>
+            <option value="rejected">拒绝</option>
+        </select>
+        <label for="approver">审批人:</label>
+        <select id="approver" required>
+            <option value="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266">anthn
+                (0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266) (full)</option>
+            <option value="0x70997970C51812dc3A010C7d01b50e0d17dc79C8">authz
+                (0x70997970C51812dc3A010C7d01b50e0d17dc79C8) (full)</option>
+            <option value="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC">test1
+                (0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC) (partial)</option>
+            <option value="0x90F79bf6EB2c4f870365E785982E1f101E93b906">test2
+                (0x90F79bf6EB2c4f870365E785982E1f101E93b906) (partial)</option>
+        </select>
+        <button type="submit">提交审批</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8888';
+
+        async function callAPI(endpoint, method, data) {
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+            return await response.json();
+        }
+
+        document.getElementById('createForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const result = await callAPI('/workflow/create', 'POST', {
+                workflow_name: document.getElementById('workflowName').value,
+                to_addr: document.getElementById('toAddr').value,
+                description: document.getElementById('description').value,
+            });
+            document.getElementById('result').innerText = JSON.stringify(result, null, 2);
+        });
+
+        document.getElementById('listForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pageNum = document.getElementById('pageNum').value;
+            const pageSize = document.getElementById('pageSize').value;
+            const result = await callAPI(`/workflow/page?pageNum=${pageNum}&pageSize=${pageSize}`, 'GET');
+            document.getElementById('result').innerText = JSON.stringify(result, null, 2);
+        });
+
+        document.getElementById('approveForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const approverAddr = document.getElementById('approver').value;
+            const result = await callAPI('/workflow/approve', 'POST', {
+                workflow_id: parseInt(document.getElementById('workflowID').value),
+                approval_status: document.getElementById('approvalStatus').value,
+                approver_id: approverAddr,
+                approver_addr: approverAddr,
+            });
+            document.getElementById('result').innerText = JSON.stringify(result, null, 2);
+        });
+
+        function updateToAddr() {
+            const select = document.getElementById('toAddrSelect');
+            const input = document.getElementById('toAddr');
+            input.value = select.value;
+        }
+    </script>
+</body>
+
+</html>

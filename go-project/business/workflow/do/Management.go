@@ -1,6 +1,7 @@
 package do
 
 import (
+	"errors"
 	"gorm.io/gorm"
 	"time"
 )
@@ -29,4 +30,16 @@ type ManagementManager struct {
 
 func NewManagementManager(db *gorm.DB) *ManagementManager {
 	return &ManagementManager{db: db}
+}
+
+func (m *ManagementManager) HasFullPermission(addr string) (bool, error) {
+	var management Management
+	result := m.db.Where("addr = ? AND permission_level = ?", addr, "full").First(&management)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, result.Error
+	}
+	return true, nil
 }

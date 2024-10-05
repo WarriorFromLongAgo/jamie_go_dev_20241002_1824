@@ -69,7 +69,7 @@ func TestTestErc20Client_ApproveAndTransfer(t *testing.T) {
 	printERC20Balance(t, ctx, erc20Client, toAddress, "To")
 }
 
-func printERC20Balance(t *testing.T, ctx context.Context, client *TestErc20Client, address common.Address, label string) {
+func printERC20Balance(t *testing.T, ctx context.Context, client TestErc20Client, address common.Address, label string) {
 	balance, err := client.BalanceOf(ctx, address)
 	if err != nil {
 		t.Fatalf("Failed to get balance for %s address: %v", label, err)

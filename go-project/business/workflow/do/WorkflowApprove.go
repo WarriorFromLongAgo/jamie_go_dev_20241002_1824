@@ -34,3 +34,12 @@ func NewWorkFlowApproveManager(db *gorm.DB) *WorkFlowApproveManager {
 func (m *WorkFlowApproveManager) Create(approve *WorkFlowApprove) error {
 	return m.db.Create(approve).Error
 }
+
+func (m *WorkFlowApproveManager) CountUniqueApprovedAddresses(workflowID int) (int64, error) {
+	var count int64
+	err := m.db.Model(&WorkFlowApprove{}).
+		Where("workflow_id = ? AND status = ?", workflowID, "approved").
+		Distinct("approve_addr").
+		Count(&count).Error
+	return count, err
+}

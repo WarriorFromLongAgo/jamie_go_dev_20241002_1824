@@ -1,8 +1,11 @@
 package do
 
 import (
-	"gorm.io/gorm"
+	"errors"
+	"fmt"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type TokenInfo struct {
@@ -29,4 +32,16 @@ type TokenInfoManager struct {
 
 func NewTokenInfoManager(db *gorm.DB) *TokenInfoManager {
 	return &TokenInfoManager{db: db}
+}
+
+func (m *TokenInfoManager) GetByID(id int) (*TokenInfo, error) {
+	var tokenInfo TokenInfo
+	result := m.db.First(&tokenInfo, id)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("TokenInfoManager GetByID: %w", result.Error)
+	}
+	return &tokenInfo, nil
 }

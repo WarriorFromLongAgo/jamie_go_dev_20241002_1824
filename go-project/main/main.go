@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"go-project/chain/eth"
-	"go-project/synchronizer"
+	globalconst "go-project/common"
+	"go-project/scheduled"
 	"go.uber.org/zap"
 
 	"go-project/main/config"
@@ -44,12 +45,26 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to create Ethereum client", zap.Error(err))
 	}
-
-	sync, err := synchronizer.NewSynchronizer(ctx, ethClient, dbb)
+	erc20Client, err := eth.NewTestErc20Client(ctx, "http://127.0.0.1:8545", globalconst.TEMP_TEST_ERC20_ADDRESS)
 	if err != nil {
-		logger.Fatal("Failed to create Synchronizer", zap.Error(err))
+		logger.Fatal("Failed to create NewTestErc20Client", zap.Error(err))
 	}
-	go sync.Start()
+
+	scanBlock, err := scheduled.NewScanBlock(ctx, ethClient, dbb, logger)
+	if err != nil {
+		logger.Fatal("Failed to create ScanBlock", zap.Error(err))
+	}
+	processingFLow, err := scheduled.NewProcessingFLow(ctx, ethClient, erc20Client, dbb, logger)
+	if err != nil {
+		logger.Fatal("Failed to create processingFLow", zap.Error(err))
+	}
+	incrementBlock, err := scheduled.NewTestIncrementBlock(ctx, ethClient, erc20Client, dbb, logger)
+	if err != nil {
+		logger.Fatal("Failed to create incrementBlock", zap.Error(err))
+	}
+	go scanBlock.Start()
+	go processingFLow.Start()
+	go incrementBlock.Start()
 
 	server.RunServer(cfg, logger, dbb)
 }

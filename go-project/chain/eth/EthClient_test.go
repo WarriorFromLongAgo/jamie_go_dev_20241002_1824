@@ -3,11 +3,13 @@ package eth
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/json"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	global_const "go-project/common"
+	globalconst "go-project/common"
 	"math/big"
 	"testing"
 	"time"
@@ -69,6 +71,48 @@ func TestEthClient_BlockHeaderListByRange(t *testing.T) {
 	t.Logf("Retrieved %d block headers", len(headers))
 }
 
+func TestEthClient_BlockByNumber(t *testing.T) {
+	ctx := context.Background()
+
+	t.Log("正在连接 EthClient...")
+	ethClient, err := DialEthClient(ctx, "http://127.0.0.1:8545")
+	if err != nil {
+		t.Fatalf("创建 EthClient 失败: %v", err)
+	}
+	if ethClient == nil {
+		t.Fatalf("EthClient 为 nil，尽管没有报错")
+	}
+	defer ethClient.Close()
+	t.Log("EthClient 创建成功")
+
+	// 选择一个区块号
+	blockHeader, _ := ethClient.LatestFinalizedBlockHeader()
+	blockNumber := blockHeader.Number
+	//blockNumber := big.NewInt(740) // 替换为您想测试的实际区块号
+	// 获取区块
+	block, err := ethClient.BlockByNumberV3(ctx, blockNumber)
+	if err != nil {
+		t.Fatalf("获取区块失败: %v", err)
+	}
+	blockJson, _ := json.Marshal(block)
+	fmt.Printf("scanBlocks BlockByNumberV3 block number %d \n", blockNumber)
+	fmt.Printf("scanBlocks BlockByNumberV3 block number %d \n", block.Number())
+	fmt.Printf("scanBlocks BlockByNumberV3 block %s \n", blockJson)
+
+	// 获取区块中的交易
+	transactions := block.Transactions()
+	transactionsJson, _ := json.Marshal(transactions)
+	fmt.Printf("scanBlocks BlockByNumberV3 transactionsJson %s \n", transactionsJson)
+
+	// 打印交易数量
+	t.Logf("区块 %d 中包含 %d 笔交易", blockNumber, len(transactions))
+
+	// 遍历并打印每笔交易的哈希
+	for i, tx := range transactions {
+		t.Logf("交易 %d: %s", i, tx.Hash().Hex())
+	}
+}
+
 func TestEthClient_TxByTxHash(t *testing.T) {
 	ctx := context.Background()
 	ethClient, err := DialEthClient(ctx, "http://127.0.0.1:8545")
@@ -78,12 +122,13 @@ func TestEthClient_TxByTxHash(t *testing.T) {
 	defer ethClient.Close()
 
 	// 这里需要一个有效的交易哈希,您可能需要先发送一个交易或者从区块链上获取一个有效的交易哈希
-	txHash := common.HexToHash("0x1234567890123456789012345678901234567890123456789012345678901234")
+	txHash := common.HexToHash("0xd1085a5feae0dd6ced58e7facf75cce3cfd1f07c6138e38c071bc92ee3e50ea5")
 	tx, err := ethClient.TxByTxHash(txHash)
 	if err != nil {
 		t.Fatalf("Failed to get transaction by hash: %v", err)
 	}
-	t.Logf("Transaction value: %s", tx.Value().String())
+	marshal, _ := json.Marshal(tx)
+	t.Logf("Transaction: %s", string(marshal))
 }
 
 func TestEthClient_TxReceiptByTxHash(t *testing.T) {
@@ -157,7 +202,7 @@ func TestEthClient_SendRawTransaction(t *testing.T) {
 	}
 	defer ethClient.Close()
 
-	privateKey, err := crypto.HexToECDSA(global_const.OWNER_PRV_KEY)
+	privateKey, err := crypto.HexToECDSA(globalconst.OWNER_PRV_KEY)
 	if err != nil {
 		t.Fatalf("Failed to create private key: %v", err)
 	}
@@ -180,11 +225,11 @@ func TestEthClient_SendRawTransaction(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get gas price: %v", err)
 	}
-	toAddress := common.HexToAddress(global_const.TEMP_TO_ADDRESS)
+	toAddress := common.HexToAddress(globalconst.TEMP_TO_ADDRESS)
 
 	tx := types.NewTransaction(uint64(nonce), toAddress, value, gasLimit, gasPrice, nil)
 
-	chainID := big.NewInt(global_const.ChainId)
+	chainID := big.NewInt(globalconst.ChainId)
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
 	if err != nil {
 		t.Fatalf("Failed to sign transaction: %v", err)
@@ -227,12 +272,12 @@ func TestEthClient_SendRawERC20Transaction(t *testing.T) {
 	}
 	defer ethClient.Close()
 
-	erc20Client, err := NewTestErc20Client(ctx, "http://127.0.0.1:8545", global_const.TEMP_TEST_ERC20_ADDRESS)
+	erc20Client, err := NewTestErc20Client(ctx, "http://127.0.0.1:8545", globalconst.TEMP_TEST_ERC20_ADDRESS)
 	if err != nil {
 		t.Fatalf("Failed to create TestErc20Client: %v", err)
 	}
 
-	privateKey, err := crypto.HexToECDSA(global_const.OWNER_PRV_KEY)
+	privateKey, err := crypto.HexToECDSA(globalconst.OWNER_PRV_KEY)
 	if err != nil {
 		t.Fatalf("Failed to create private key: %v", err)
 	}
@@ -249,7 +294,7 @@ func TestEthClient_SendRawERC20Transaction(t *testing.T) {
 		t.Fatalf("Failed to get nonce: %v", err)
 	}
 
-	toAddress := common.HexToAddress(global_const.TEMP_TO_ADDRESS)
+	toAddress := common.HexToAddress(globalconst.TEMP_TO_ADDRESS)
 	amount := big.NewInt(9 * 1e6)
 
 	gasPrice, err := ethClient.SuggestGasPrice()
@@ -271,10 +316,10 @@ func TestEthClient_SendRawERC20Transaction(t *testing.T) {
 	data = append(data, paddedAddress...)
 	data = append(data, paddedAmount...)
 
-	erc20Address := common.HexToAddress(global_const.TEMP_TEST_ERC20_ADDRESS)
+	erc20Address := common.HexToAddress(globalconst.TEMP_TEST_ERC20_ADDRESS)
 	tx := types.NewTransaction(uint64(nonce), erc20Address, big.NewInt(0), 300000, gasPrice, data)
 
-	chainID := big.NewInt(global_const.ChainId)
+	chainID := big.NewInt(globalconst.ChainId)
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
 	if err != nil {
 		t.Fatalf("Failed to sign transaction: %v", err)

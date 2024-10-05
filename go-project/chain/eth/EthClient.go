@@ -2,8 +2,10 @@ package eth
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"math/big"
 	"net"
 	"net/url"
@@ -35,11 +37,15 @@ const (
 )
 
 type EthClient interface {
+	BlockByNumber(context.Context, *big.Int) (*types.Block, error)
+	BlockByNumberV2(ctx context.Context, number *big.Int) (*types.Block, error)
+	BlockByNumberV3(ctx context.Context, number *big.Int) (*types.Block, error)
+	BlockByNumberReturnJson(ctx context.Context, number *big.Int) (*types.Block, error)
 	// BlockHeaderByNumber(*big.Int) (*types.Header, error)
 	// LatestSafeBlockHeader() (*types.Header, error)
 	LatestFinalizedBlockHeader() (*types.Header, error)
 	BlockHeaderByBlockHash(common.Hash) (*types.Header, error)
-	BlockHeaderListByRange(*big.Int, *big.Int) ([]types.Header, error)
+	BlockHeaderListByRange(*big.Int, *big.Int) ([]*types.Header, error)
 
 	TxByTxHash(common.Hash) (*types.Transaction, error)
 
@@ -152,21 +158,22 @@ func (c *client) BlockHeaderByBlockHash(hash common.Hash) (*types.Header, error)
 	return header, nil
 }
 
-func (c *client) BlockHeaderListByRange(startHeight, endHeight *big.Int) ([]types.Header, error) {
+func (c *client) BlockHeaderListByRange(startHeight, endHeight *big.Int) ([]*types.Header, error) {
 	if startHeight.Cmp(endHeight) == 0 {
-		return []types.Header{}, nil
+		return []*types.Header{}, nil
 	}
 
 	count := new(big.Int).Sub(endHeight, startHeight).Uint64() + 1
-	headers := make([]types.Header, count)
+	headers := make([]*types.Header, count)
 	batchElems := make([]gethrpc.BatchElem, count)
 
 	for i := uint64(0); i < count; i++ {
 		height := new(big.Int).Add(startHeight, new(big.Int).SetUint64(i))
+		headers[i] = &types.Header{}
 		batchElems[i] = gethrpc.BatchElem{
 			Method: "eth_getBlockByNumber",
 			Args:   []interface{}{toBlockNumArg(height), false},
-			Result: &headers[i],
+			Result: headers[i],
 		}
 	}
 
@@ -178,24 +185,14 @@ func (c *client) BlockHeaderListByRange(startHeight, endHeight *big.Int) ([]type
 	}
 
 	size := 0
-	for i, batchElem := range batchElems {
+	for _, batchElem := range batchElems {
 		if batchElem.Error != nil {
 			if size == 0 {
 				return nil, batchElem.Error
 			}
 			break
 		}
-		header, ok := batchElem.Result.(*types.Header)
-		if !ok {
-			return nil, fmt.Errorf("RPC response(%v) con't transfer types.Header", batchElem.Result)
-		}
-
-		headers[i] = *header
 		size++
-
-		// if i > 0 && headers[i].ParentHash != headers[i-1].Hash() {
-		//     return nil, fmt.Errorf("ParentHash %s now follow %s", headers[i].Hash(), headers[i-1].Hash())
-		// }
 	}
 
 	return headers[:size], nil
@@ -214,6 +211,112 @@ func (c *client) TxByTxHash(hash common.Hash) (*types.Transaction, error) {
 	}
 
 	return tx, nil
+}
+
+func (c *client) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+	var block *types.Block
+	err := c.rpc.CallContext(ctx, &block, "eth_getBlockByNumber", toBlockNumArg(number), true)
+	if err != nil {
+		return nil, err
+	}
+	if block == nil {
+		return nil, ethereum.NotFound
+	}
+	blockJson, _ := json.Marshal(block)
+	fmt.Printf("原始 blockJson 响应: %s\n", string(blockJson))
+
+	return block, nil
+}
+
+func (c *client) BlockByNumberV2(ctx context.Context, number *big.Int) (*types.Block, error) {
+	var raw json.RawMessage
+	err := c.rpc.CallContext(ctx, &raw, "eth_getBlockByNumber", toBlockNumArg(number), true)
+	if err != nil {
+		return nil, err
+	}
+
+	// 打印原始 JSON 响应
+	fmt.Printf("原始 JSON 响应: %s\n", string(raw))
+
+	if len(raw) == 0 {
+		return nil, ethereum.NotFound
+	}
+
+	var block types.Block
+	if err := json.Unmarshal(raw, &block); err != nil {
+		return nil, fmt.Errorf("解析区块数据失败: %v", err)
+	}
+
+	// 使用自定义方法序列化区块
+	blockJSON, err := blockToJSON(&block)
+	if err != nil {
+		return nil, fmt.Errorf("序列化区块数据失败: %v", err)
+	}
+	fmt.Printf("处理后的区块 JSON: %s\n", string(blockJSON))
+
+	return &block, nil
+}
+
+func (c *client) BlockByNumberV3(ctx context.Context, number *big.Int) (*types.Block, error) {
+	// 假设 c.rpc 已经是 *rpc.Client 类型
+	tempEthClient, err := ethclient.Dial("http://127.0.0.1:8545")
+	if err != nil {
+		log.Error("无法连接到以太坊客户端: %v", err)
+		return nil, err
+	}
+	defer tempEthClient.Close()
+
+	block, err := tempEthClient.BlockByNumber(ctx, number)
+	if err != nil {
+		return nil, err
+	}
+
+	// 如果区块为空,返回 NotFound 错误
+	if block == nil {
+		return nil, ethereum.NotFound
+	}
+
+	// 打印原始区块数据(用于调试)
+	blockJson, _ := json.Marshal(block)
+	fmt.Printf("原始 blockJson 响应: %s\n", string(blockJson))
+
+	return block, nil
+}
+
+// 自定义序列化方法
+func blockToJSON(b *types.Block) ([]byte, error) {
+	type BlockAlias types.Block
+	return json.Marshal(&struct {
+		*BlockAlias
+		Hash common.Hash `json:"hash"`
+	}{
+		BlockAlias: (*BlockAlias)(b),
+		Hash:       b.Hash(),
+	})
+}
+
+func (c *client) BlockByNumberReturnJson(ctx context.Context, number *big.Int) (*types.Block, error) {
+	var rawResponse json.RawMessage
+	err := c.rpc.CallContext(ctx, &rawResponse, "eth_getBlockByNumber", toBlockNumArg(number), true)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("原始 RPC 响应: %s\n", string(rawResponse))
+
+	var block *types.Block
+	err = json.Unmarshal(rawResponse, &block)
+	if err != nil {
+		return nil, fmt.Errorf("解析区块数据失败: %v", err)
+	}
+
+	if block == nil {
+		return nil, ethereum.NotFound
+	}
+
+	fmt.Printf("区块中的交易数量: %d\n", len(block.Transactions()))
+
+	return block, nil
 }
 
 func (c *client) TxReceiptByTxHash(hash common.Hash) (*types.Receipt, error) {
