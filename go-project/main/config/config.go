@@ -8,6 +8,7 @@ type Configuration struct {
 	Server        ServerConfig        `mapstructure:"server" json:"server" yaml:"server"`
 	Log           LogConfig           `mapstructure:"log" json:"log" yaml:"log"`
 	MysqlDatabase MysqlDatabaseConfig `mapstructure:"mysqlDatabase" json:"mysqlDatabase" yaml:"mysqlDatabase"`
+	Anvil         AnvilConfig         `mapstructure:"anvil" json:"anvil" yaml:"anvil"`
 }
 
 type ServerConfig struct {
@@ -42,6 +43,11 @@ type MysqlDatabaseConfig struct {
 	LogMode             string `mapstructure:"log_mode" json:"log_mode" yaml:"log_mode"`
 	EnableFileLogWriter bool   `mapstructure:"enable_file_log_writer" json:"enable_file_log_writer" yaml:"enable_file_log_writer"`
 	LogFilename         string `mapstructure:"log_filename" json:"log_filename" yaml:"log_filename"`
+}
+
+type AnvilConfig struct {
+	Host string `mapstructure:"host" json:"host" yaml:"host"`
+	Port int    `mapstructure:"port" json:"port" yaml:"port"`
 }
 
 func LoadConfig() (*Configuration, error) {

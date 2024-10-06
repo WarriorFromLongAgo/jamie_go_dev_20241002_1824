@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  anvil:
+    build:
+      context: ./anvil
+      dockerfile: Dockerfile
+    ports:
+      - "8545:8545"
+    networks:
+      - shared-network
+
+  app:
+    build:
+      context: ./go-project
+      dockerfile: Dockerfile
+    ports:
+      - "8888:8888"
+    depends_on:
+      - db
+      - anvil
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=123456
+      - DB_NAME=workflow_management
+    volumes:
+      - ./go-project/log:/app/log
+    networks:
+      - shared-network
+
+  db:
+    image: mysql:5.7.44
+    environment:
+      - MYSQL_ROOT_PASSWORD=123456
+      - MYSQL_DATABASE=workflow_management
+    volumes:
+      - ./mysql:/docker-entrypoint-initdb.d
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+
+volumes:
+  db_data:

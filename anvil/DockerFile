@@ -1,0 +1,17 @@
+# 使用一个基础的 Linux 镜像，例如 Ubuntu
+FROM ubuntu:20.04
+
+# 复制编译好的二进制文件到容器中的 /app 目录
+COPY ./anvil /app/anvil
+
+# 设置工作目录
+WORKDIR /app
+
+# 确保二进制文件有执行权限
+RUN chmod +x anvil
+
+# 暴露应用程序的端口
+EXPOSE 8545
+
+# 运行二进制文件
+CMD ["./anvil"]

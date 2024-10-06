@@ -15,9 +15,13 @@ log:
   max_age: 28
   compress: true
 
+anvil:
+  host: anvil
+  port: 8545
+
 mysqlDatabase:
   driver: mysql
-  host: 192.168.101.55
+  host: db
   port: 3306
   database: workflow_management
   username: root
