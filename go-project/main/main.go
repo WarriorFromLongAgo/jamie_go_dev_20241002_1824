@@ -4,6 +4,7 @@ import (
 	"context"
 	"go-project/chain/eth"
 	globalconst "go-project/common"
+	"go-project/main/anvil"
 	"go-project/scheduled"
 	"go.uber.org/zap"
 
@@ -40,12 +41,14 @@ func main() {
 		}
 	}()
 
+	anvilUrl := anvil.GetAnvilURL(cfg)
+
 	ctx := context.Background()
-	ethClient, err := eth.DialEthClient(ctx, "http://127.0.0.1:8545")
+	ethClient, err := eth.DialEthClient(ctx, anvilUrl)
 	if err != nil {
 		logger.Fatal("Failed to create Ethereum client", zap.Error(err))
 	}
-	erc20Client, err := eth.NewTestErc20Client(ctx, "http://127.0.0.1:8545", globalconst.TEMP_TEST_ERC20_ADDRESS)
+	erc20Client, err := eth.NewTestErc20Client(ctx, anvilUrl, globalconst.TEMP_TEST_ERC20_ADDRESS)
 	if err != nil {
 		logger.Fatal("Failed to create NewTestErc20Client", zap.Error(err))
 	}

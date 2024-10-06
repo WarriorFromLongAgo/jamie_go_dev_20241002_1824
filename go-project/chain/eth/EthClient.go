@@ -63,7 +63,8 @@ type EthClient interface {
 }
 
 type client struct {
-	rpc rpc.RPC
+	rpc       rpc.RPC
+	ethClient *ethclient.Client
 }
 
 func DialEthClient(ctx context.Context, rpcUrl string) (EthClient, error) {
@@ -87,7 +88,15 @@ func DialEthClient(ctx context.Context, rpcUrl string) (EthClient, error) {
 		return nil, err
 	}
 
-	return &client{rpc: rpc.NewRPC(rpcClient)}, nil
+	ethClient, err := ethclient.DialContext(ctx, rpcUrl)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ethclient: %w", err)
+	}
+
+	return &client{
+		rpc:       rpc.NewRPC(rpcClient),
+		ethClient: ethClient,
+	}, nil
 }
 
 //func (c *client) BlockHeaderByNumber(number *big.Int) (*types.Header, error) {
@@ -258,25 +267,15 @@ func (c *client) BlockByNumberV2(ctx context.Context, number *big.Int) (*types.B
 }
 
 func (c *client) BlockByNumberV3(ctx context.Context, number *big.Int) (*types.Block, error) {
-	// 假设 c.rpc 已经是 *rpc.Client 类型
-	tempEthClient, err := ethclient.Dial("http://127.0.0.1:8545")
-	if err != nil {
-		log.Error("无法连接到以太坊客户端: %v", err)
-		return nil, err
-	}
-	defer tempEthClient.Close()
-
-	block, err := tempEthClient.BlockByNumber(ctx, number)
+	block, err := c.ethClient.BlockByNumber(ctx, number)
 	if err != nil {
 		return nil, err
 	}
 
-	// 如果区块为空,返回 NotFound 错误
 	if block == nil {
 		return nil, ethereum.NotFound
 	}
 
-	// 打印原始区块数据(用于调试)
 	blockJson, _ := json.Marshal(block)
 	fmt.Printf("原始 blockJson 响应: %s\n", string(blockJson))
 

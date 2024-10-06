@@ -2,7 +2,8 @@ package anvil
 
 import (
 	"fmt"
-	"your_project/config" // Adjust the import path as necessary
+
+	"go-project/main/config"
 )
 
 // GetAnvilURL constructs and returns the URL for the Anvil service
