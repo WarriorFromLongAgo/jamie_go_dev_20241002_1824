@@ -46,11 +46,11 @@ func main() {
 	ctx := context.Background()
 	ethClient, err := eth.DialEthClient(ctx, anvilUrl)
 	if err != nil {
-		logger.Fatal("Failed to create Ethereum client", zap.Error(err))
+		logger.Fatal("Failed to create Ethereum client", zap.Any("anvilUrl", anvilUrl), zap.Error(err))
 	}
 	erc20Client, err := eth.NewTestErc20Client(ctx, anvilUrl, globalconst.TEMP_TEST_ERC20_ADDRESS)
 	if err != nil {
-		logger.Fatal("Failed to create NewTestErc20Client", zap.Error(err))
+		logger.Fatal("Failed to create NewTestErc20Client", zap.Any("anvilUrl", anvilUrl), zap.Error(err))
 	}
 
 	scanBlock, err := scheduled.NewScanBlock(ctx, ethClient, dbb, logger)

@@ -4,7 +4,7 @@ services:
   anvil:
     build:
       context: ./anvil
-      dockerfile: Dockerfile
+      dockerfile: DockerFile
     ports:
       - "8545:8545"
     networks:
@@ -36,14 +36,23 @@ services:
       - MYSQL_DATABASE=workflow_management
     volumes:
       - ./mysql:/docker-entrypoint-initdb.d
-      - db_data:/var/lib/mysql
+      - ./db_data:/var/lib/mysql
     ports:
       - "3306:3306"
     networks:
       - shared-network
 
+  # deployer:
+  #   build:
+  #     context: .
+  #     dockerfile: deployer_solidity/Dockerfile
+  #   depends_on:
+  #     - anvil
+  #   environment:
+  #     - RPC_URL=http://anvil:8545
+  #     - PRIVATE_KEY=0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6
+  #   networks:
+  #     - shared-network
+
 networks:
   shared-network:
-
-volumes:
-  db_data:

@@ -3,3 +3,8 @@
 
 # idea
 .idea
+
+db_data
+go-project/log/logs/jamie-demo-mysql.log
+go-project/log/logs/jamie-demo.log
+go-project/go.sum
