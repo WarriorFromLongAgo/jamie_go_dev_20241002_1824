@@ -2,16 +2,17 @@ package main
 
 import (
 	"context"
+
+	"go.uber.org/zap"
+
 	"go-project/chain/eth"
 	globalconst "go-project/common"
 	"go-project/main/anvil"
-	"go-project/scheduled"
-	"go.uber.org/zap"
-
 	"go-project/main/config"
 	"go-project/main/db"
 	"go-project/main/log"
 	"go-project/main/server"
+	"go-project/scheduled"
 )
 
 func main() {
@@ -69,5 +70,5 @@ func main() {
 	go processingFLow.Start()
 	go incrementBlock.Start()
 
-	server.RunServer(cfg, logger, dbb)
+	server.RunServer(cfg, logger, dbb, erc20Client)
 }

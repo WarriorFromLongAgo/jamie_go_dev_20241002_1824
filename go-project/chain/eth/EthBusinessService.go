@@ -3,6 +3,7 @@ package eth
 import (
 	"context"
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -31,6 +32,8 @@ func NewEthBusinessService(ethClient EthClient, erc20Client TestErc20Client, log
 	}
 }
 
+var InsufficientBalanceError = errors.New("InsufficientBalanceError")
+
 func (s *BusinessService) TransferERC20(
 	ctx context.Context,
 	prvKey *ecdsa.PrivateKey,
@@ -39,6 +42,14 @@ func (s *BusinessService) TransferERC20(
 	contractAddress string,
 	amount *big.Int,
 ) (string, []byte, error) {
+	balance, err := s.checkBalance(ctx, fromAddress, contractAddress, amount)
+	if err != nil {
+		return "", nil, fmt.Errorf("检查余额失败: %w", err)
+	}
+	if balance.Cmp(amount) < 0 {
+		return "", nil, InsufficientBalanceError
+	}
+
 	maxRetries := 3
 	var lastErr error
 	var txHash string
@@ -154,4 +165,18 @@ func WaitForTransaction(ctx context.Context, ethClient EthClient, txHash common.
 		}
 	}
 	return fmt.Errorf("交易确认超时")
+}
+
+func (s *BusinessService) checkBalance(ctx context.Context, fromAddress, contractAddress string, amount *big.Int) (*big.Int, error) {
+	from := common.HexToAddress(fromAddress)
+	//contract := common.HexToAddress(contractAddress)
+
+	balance, err := s.erc20Client.BalanceOf(ctx, from)
+	if err != nil {
+		return nil, fmt.Errorf("获取余额失败: %w", err)
+	}
+
+	s.log.Info("当前余额", zap.String("address", fromAddress), zap.String("balance", balance.String()))
+
+	return balance, nil
 }

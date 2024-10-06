@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"errors"
-
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,20 +14,22 @@ import (
 	"gorm.io/gorm"
 
 	"go-project/business"
+	"go-project/chain/eth"
 	"go-project/common/web"
 	"go-project/main/config"
 	"go-project/main/log"
 )
 
-func RunServer(cfg *config.Configuration, log *log.ZapLogger, db *gorm.DB) {
+func RunServer(cfg *config.Configuration, log *log.ZapLogger, db *gorm.DB, ERC20Client eth.TestErc20Client) {
 	ginRouter := gin.Default()
 
 	ginRouter.Use(web.CorsHandler())
 	ginRouter.Use(web.ErrorHandler(log))
 
 	router := &business.Route{
-		DB:  db,
-		Log: log,
+		DB:          db,
+		Log:         log,
+		ERC20Client: ERC20Client,
 	}
 	router.Register(ginRouter)
 

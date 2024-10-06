@@ -2,16 +2,18 @@ package eth
 
 import (
 	"context"
+	"math/big"
+	"testing"
+	"time"
+
+	"go.uber.org/zap"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	globalconst "go-project/common"
 	"go-project/main/config"
 	"go-project/main/log"
-	"go.uber.org/zap"
-	"math/big"
-	"testing"
-	"time"
 )
 
 func TestBusinessService_TransferERC20(t *testing.T) {

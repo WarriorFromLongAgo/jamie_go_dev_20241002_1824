@@ -1,12 +1,11 @@
 package logs
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"log"
 	"os"
 	"time"
-
-	"crypto/rand"
-	"encoding/base64"
 )
 
 const LogTimeFormat = "2006-01-02"

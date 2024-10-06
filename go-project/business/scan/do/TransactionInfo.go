@@ -1,8 +1,9 @@
 package do
 
 import (
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type TransactionInfo struct {

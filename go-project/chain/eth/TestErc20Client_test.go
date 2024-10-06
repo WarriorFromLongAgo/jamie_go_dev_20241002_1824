@@ -2,13 +2,15 @@ package eth
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	global_const "go-project/common"
 	"math/big"
 	"testing"
 	"time"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+
+	global_const "go-project/common"
 )
 
 func TestTestErc20Client_BalanceOf(t *testing.T) {

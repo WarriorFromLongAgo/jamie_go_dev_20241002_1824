@@ -1,8 +1,6 @@
 package db
 
 import (
-	"go-project/main/config"
-	log2 "go-project/main/log"
 	"io"
 	"log"
 	"os"
@@ -14,6 +12,9 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	ormLogger "gorm.io/gorm/logger"
+
+	"go-project/main/config"
+	log2 "go-project/main/log"
 )
 
 func InitializeDB(cfg *config.Configuration, log *log2.ZapLogger) *gorm.DB {

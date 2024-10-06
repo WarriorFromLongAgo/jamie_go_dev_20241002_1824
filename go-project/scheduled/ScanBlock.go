@@ -3,18 +3,18 @@ package scheduled
 import (
 	"context"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"go-project/business/token/do"
-	"go-project/main/log"
-	"go.uber.org/zap"
-	"gorm.io/gorm"
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"go.uber.org/zap"
+	"gorm.io/gorm"
 
 	do2 "go-project/business/scan/do"
+	"go-project/business/token/do"
 	"go-project/chain/eth"
+	"go-project/main/log"
 )
 
 type ScanBlock struct {

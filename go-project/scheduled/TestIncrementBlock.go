@@ -2,19 +2,20 @@ package scheduled
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math/big"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	global_const "go-project/common"
 	"go.uber.org/zap"
-	"math/big"
-	"time"
-
 	"gorm.io/gorm"
 
 	"go-project/chain/eth"
+	global_const "go-project/common"
 	"go-project/main/log"
 )
 
@@ -127,8 +128,6 @@ func (s *TestIncrementBlock) printBalances(fromAddress, toAddress common.Address
 	return nil
 }
 
-// ... 现有代码 ...
-
 func (s *TestIncrementBlock) transferERC20() error {
 	privateKey, err := crypto.HexToECDSA(global_const.OWNER_PRV_KEY)
 	if err != nil {
@@ -143,7 +142,11 @@ func (s *TestIncrementBlock) transferERC20() error {
 	ethBusiness := eth.NewEthBusinessService(s.ethClient, s.erc20Client, s.log)
 	txHash, transferData, err := ethBusiness.TransferERC20(context.Background(), privateKey, fromAddress.Hex(), toAddress.Hex(), tokenAddress.Hex(), amount)
 	if err != nil {
-		return err
+		if errors.Is(err, eth.InsufficientBalanceError) {
+			s.log.Error("ERC20转账失败: 余额不足", zap.Error(err))
+			return fmt.Errorf("ERC20转账失败: 余额不足")
+		}
+		return fmt.Errorf("ERC20转账失败: %w", err)
 	}
 
 	fmt.Printf("scanBlocks BlockByNumberV3 transactionsJson %s \n", txHash)

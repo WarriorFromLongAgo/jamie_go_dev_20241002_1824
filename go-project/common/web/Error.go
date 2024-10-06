@@ -2,8 +2,9 @@ package web
 
 import (
 	"github.com/gin-gonic/gin"
-	"go-project/main/log"
 	"go.uber.org/zap"
+
+	"go-project/main/log"
 )
 
 func ErrorHandler(logger *log.ZapLogger) gin.HandlerFunc {

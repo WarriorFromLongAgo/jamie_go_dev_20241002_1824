@@ -3,6 +3,7 @@ package scheduled
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -109,8 +110,13 @@ func (s *ProcessingFLow) processingFLow() error {
 
 		if err != nil {
 			s.log.Error("ERC20转账失败", zap.Error(err), zap.Int("LogID", pendingLog.ID))
-			pendingLog.RetryCount++
-			pendingLog.Status = do.StatusPending
+			if errors.Is(err, eth.InsufficientBalanceError) {
+				s.log.Error("余额不足", zap.Int("LogID", pendingLog.ID))
+				pendingLog.Status = do.StatusFailed
+			} else {
+				pendingLog.RetryCount++
+				pendingLog.Status = do.StatusPending
+			}
 		} else {
 			s.log.Info("ERC20转账成功", zap.Int("LogID", pendingLog.ID), zap.String("TxHash", txHash))
 			pendingLog.Status = do.StatusPending

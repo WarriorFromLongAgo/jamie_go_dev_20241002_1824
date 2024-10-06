@@ -1,7 +1,6 @@
 package log
 
 import (
-	"go-project/main/config"
 	"os"
 	"time"
 
@@ -9,6 +8,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 
+	"go-project/main/config"
 	"go-project/util/file"
 )
 
