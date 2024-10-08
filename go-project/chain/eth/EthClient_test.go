@@ -347,3 +347,161 @@ func TestEthClient_SendRawERC20Transaction(t *testing.T) {
 	printERC20Balance(t, ctx, erc20Client, fromAddress, "From (after)")
 	printERC20Balance(t, ctx, erc20Client, toAddress, "To (after)")
 }
+
+func TestEthClient_SendRawERC721Transaction(t *testing.T) {
+	ctx := context.Background()
+	ethClient, err := DialEthClient(ctx, "http://127.0.0.1:8545")
+	if err != nil {
+		t.Fatalf("Failed to create EthClient: %v", err)
+	}
+	defer ethClient.Close()
+
+	privateKey, err := crypto.HexToECDSA(globalconst.OWNER_PRV_KEY)
+	if err != nil {
+		t.Fatalf("Failed to create private key: %v", err)
+	}
+
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		t.Fatal("Failed to get public key")
+	}
+	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+
+	nonce, err := ethClient.TxCountByAddress(fromAddress)
+	if err != nil {
+		t.Fatalf("Failed to get nonce: %v", err)
+	}
+
+	toAddress := common.HexToAddress(globalconst.TEMP_TO_ADDRESS)
+	tokenId := big.NewInt(1) // 假设要转移的 NFT token ID 为 1
+
+	gasPrice, err := ethClient.SuggestGasPrice()
+	if err != nil {
+		t.Fatalf("Failed to get gas price: %v", err)
+	}
+
+	transferFnSignature := []byte("safeTransferFrom(address,address,uint256)")
+	hash := crypto.Keccak256(transferFnSignature)
+	methodID := hash[:4]
+	paddedFromAddress := common.LeftPadBytes(fromAddress.Bytes(), 32)
+	paddedToAddress := common.LeftPadBytes(toAddress.Bytes(), 32)
+	paddedTokenId := common.LeftPadBytes(tokenId.Bytes(), 32)
+
+	var data []byte
+	data = append(data, methodID...)
+	data = append(data, paddedFromAddress...)
+	data = append(data, paddedToAddress...)
+	data = append(data, paddedTokenId...)
+
+	erc721Address := common.HexToAddress(globalconst.TEMP_TEST_ERC721_ADDRESS)
+	tx := types.NewTransaction(uint64(nonce), erc721Address, big.NewInt(0), 300000, gasPrice, data)
+
+	chainID := big.NewInt(globalconst.ChainId)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
+	if err != nil {
+		t.Fatalf("Failed to sign transaction: %v", err)
+	}
+
+	rawTxBytes, err := signedTx.MarshalBinary()
+	if err != nil {
+		t.Fatalf("Failed to serialize transaction: %v", err)
+	}
+	rawTxHex := hexutil.Encode(rawTxBytes)
+
+	err = ethClient.SendRawTransaction(rawTxHex)
+	if err != nil {
+		t.Fatalf("Failed to send raw transaction: %v", err)
+	}
+	t.Logf("ERC721 transfer transaction sent successfully: %s", signedTx.Hash().Hex())
+
+	err = WaitForTransaction(ctx, ethClient, signedTx.Hash())
+	if err != nil {
+		t.Fatalf("Failed to wait for transaction: %v", err)
+	}
+
+	// 这里可以添加检查 NFT 所有权变更的逻辑
+	t.Logf("ERC721 token %s transferred from %s to %s", tokenId.String(), fromAddress.Hex(), toAddress.Hex())
+}
+
+func TestEthClient_SendRawERC1155Transaction(t *testing.T) {
+	ctx := context.Background()
+	ethClient, err := DialEthClient(ctx, "http://127.0.0.1:8545")
+	if err != nil {
+		t.Fatalf("Failed to create EthClient: %v", err)
+	}
+	defer ethClient.Close()
+
+	privateKey, err := crypto.HexToECDSA(globalconst.OWNER_PRV_KEY)
+	if err != nil {
+		t.Fatalf("Failed to create private key: %v", err)
+	}
+
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		t.Fatal("Failed to get public key")
+	}
+	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+
+	nonce, err := ethClient.TxCountByAddress(fromAddress)
+	if err != nil {
+		t.Fatalf("Failed to get nonce: %v", err)
+	}
+
+	toAddress := common.HexToAddress(globalconst.TEMP_TO_ADDRESS)
+	tokenId := big.NewInt(1)  // 假设要转移的 token ID 为 1
+	amount := big.NewInt(100) // 假设要转移 100 个 token
+
+	gasPrice, err := ethClient.SuggestGasPrice()
+	if err != nil {
+		t.Fatalf("Failed to get gas price: %v", err)
+	}
+
+	// ERC1155的safeTransferFrom方法签名
+	transferFnSignature := []byte("safeTransferFrom(address,address,uint256,uint256,bytes)")
+	hash := crypto.Keccak256(transferFnSignature)
+	methodID := hash[:4]
+
+	paddedFromAddress := common.LeftPadBytes(fromAddress.Bytes(), 32)
+	paddedToAddress := common.LeftPadBytes(toAddress.Bytes(), 32)
+	paddedTokenId := common.LeftPadBytes(tokenId.Bytes(), 32)
+	paddedAmount := common.LeftPadBytes(amount.Bytes(), 32)
+	paddedDataLength := common.LeftPadBytes(big.NewInt(0).Bytes(), 32) // 空的data参数
+
+	var data []byte
+	data = append(data, methodID...)
+	data = append(data, paddedFromAddress...)
+	data = append(data, paddedToAddress...)
+	data = append(data, paddedTokenId...)
+	data = append(data, paddedAmount...)
+	data = append(data, paddedDataLength...)
+
+	erc1155Address := common.HexToAddress(globalconst.TEMP_TEST_ERC1155_ADDRESS)
+	tx := types.NewTransaction(uint64(nonce), erc1155Address, big.NewInt(0), 300000, gasPrice, data)
+
+	chainID := big.NewInt(globalconst.ChainId)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
+	if err != nil {
+		t.Fatalf("Failed to sign transaction: %v", err)
+	}
+
+	rawTxBytes, err := signedTx.MarshalBinary()
+	if err != nil {
+		t.Fatalf("Failed to serialize transaction: %v", err)
+	}
+	rawTxHex := hexutil.Encode(rawTxBytes)
+
+	err = ethClient.SendRawTransaction(rawTxHex)
+	if err != nil {
+		t.Fatalf("Failed to send raw transaction: %v", err)
+	}
+	t.Logf("ERC1155 transfer transaction sent successfully: %s", signedTx.Hash().Hex())
+
+	err = WaitForTransaction(ctx, ethClient, signedTx.Hash())
+	if err != nil {
+		t.Fatalf("Failed to wait for transaction: %v", err)
+	}
+
+	t.Logf("ERC1155 token %s transferred from %s to %s, amount: %s", tokenId.String(), fromAddress.Hex(), toAddress.Hex(), amount.String())
+}
